@@ -127,7 +127,17 @@ def main():
             elif actions is None:
                 env.render()
             else:
-                env.step(actions)
+                if isinstance(actions, dict):
+                    # Handle dictionary actions (like reset)
+                    if "reset" in actions:
+                        # This is a reset action, don't step the environment
+                        env.render()
+                        continue
+                else:
+                    # Handle tensor actions
+                    if actions.ndim == 1:
+                        actions = actions.unsqueeze(0)
+                    env.step(actions)
             if rate_limiter:
                 rate_limiter.sleep(env)
 
