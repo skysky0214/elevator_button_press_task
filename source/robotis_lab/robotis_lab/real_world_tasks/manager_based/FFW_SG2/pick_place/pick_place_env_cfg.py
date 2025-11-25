@@ -50,13 +50,15 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     # robots: will be populated by agent env cfg
     robot: ArticulationCfg = MISSING
     # end-effector sensor: will be populated by agent env cfg
-    # ee_frame: FrameTransformerCfg = MISSING
+    left_ee_frame: FrameTransformerCfg = MISSING
+    right_ee_frame: FrameTransformerCfg = MISSING
+
     brush: AssetBaseCfg = MISSING
     basket: AssetBaseCfg = MISSING
     table: AssetBaseCfg = MISSING
 
-    cam_wrist_right: CameraCfg = MISSING
-    cam_wrist_left: CameraCfg = MISSING
+    # cam_wrist_right: CameraCfg = MISSING
+    # cam_wrist_left: CameraCfg = MISSING
     cam_head_left: CameraCfg = MISSING
 
     # plane
@@ -114,19 +116,20 @@ class ObservationsCfg:
                                     "gripper_l_joint1", "gripper_r_joint1", "head_joint1", "head_joint2", "lift_joint"],
                     "asset_name": "robot"},
         )
-        cam_wrist_left = ObsTerm(
-            func=mdp.image,
-            params={"sensor_cfg": SceneEntityCfg("cam_wrist_left"), "data_type": "rgb", "normalize": False},
-        )
-        cam_wrist_right = ObsTerm(
-            func=mdp.image,
-            params={"sensor_cfg": SceneEntityCfg("cam_wrist_right"), "data_type": "rgb", "normalize": False},
-        )
+        # cam_wrist_left = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("cam_wrist_left"), "data_type": "rgb", "normalize": False},
+        # )
+        # cam_wrist_right = ObsTerm(
+        #     func=mdp.image,
+        #     params={"sensor_cfg": SceneEntityCfg("cam_wrist_right"), "data_type": "rgb", "normalize": False},
+        # )
         cam_head_left = ObsTerm(
             func=mdp.image,
             params={"sensor_cfg": SceneEntityCfg("cam_head_left"), "data_type": "rgb", "normalize": False},
         )
-        # ee_frame_state = ObsTerm(func=mdp.ee_frame_state, params={"ee_frame_cfg": SceneEntityCfg("ee_frame"), "robot_cfg": SceneEntityCfg("robot")})
+        left_ee_frame_state = ObsTerm(func=mdp.ee_frame_state, params={"ee_frame_cfg": SceneEntityCfg("left_ee_frame"), "robot_cfg": SceneEntityCfg("robot")})
+        right_ee_frame_state = ObsTerm(func=mdp.ee_frame_state, params={"ee_frame_cfg": SceneEntityCfg("right_ee_frame"), "robot_cfg": SceneEntityCfg("robot")})
         joint_pos_target = ObsTerm(
             func=mdp.joint_pos_target_name,
             params={"joint_names": ["arm_l_joint1", "arm_l_joint2", "arm_l_joint3", "arm_l_joint4", "arm_l_joint5", "arm_l_joint6", "arm_l_joint7",
@@ -143,22 +146,22 @@ class ObservationsCfg:
     class SubtaskCfg(ObsGroup):
         """Observations for subtask group."""
 
-        # grasp_brush = ObsTerm(
-        #     func=mdp.object_grasped,
-        #     params={
-        #         "robot_cfg": SceneEntityCfg("robot"),
-        #         "ee_frame_cfg": SceneEntityCfg("ee_frame"),
-        #         "object_cfg": SceneEntityCfg("brush"),
-        #     },
-        # )
+        grasp_brush = ObsTerm(
+            func=mdp.object_grasped,
+            params={
+                "robot_cfg": SceneEntityCfg("robot"),
+                "ee_frame_cfg": SceneEntityCfg("right_ee_frame"),
+                "object_cfg": SceneEntityCfg("brush"),
+            },
+        )
 
-        # brush_in_basket = ObsTerm(
-        #     func=mdp.brush_in_basket,
-        #     params={
-        #         "brush_cfg": SceneEntityCfg("brush"),
-        #         "basket_cfg": SceneEntityCfg("basket"),
-        #     },
-        # )
+        brush_in_basket = ObsTerm(
+            func=mdp.brush_in_basket,
+            params={
+                "brush_cfg": SceneEntityCfg("brush"),
+                "basket_cfg": SceneEntityCfg("basket"),
+            },
+        )
 
         def __post_init__(self):
             self.enable_corruption = False
@@ -175,12 +178,12 @@ class TerminationsCfg:
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
-    # success = DoneTerm(
-    #     func=mdp.task_done, params={"brush_cfg": SceneEntityCfg("brush"), "basket_cfg": SceneEntityCfg("basket"), "distance_threshold": 0.1}
-    # )
+    success = DoneTerm(
+        func=mdp.task_done, params={"brush_cfg": SceneEntityCfg("brush"), "basket_cfg": SceneEntityCfg("basket"), "distance_threshold": 0.1}
+    )
 
     brush_dropping = DoneTerm(
-        func=mdp.root_height_below_minimum, params={"minimum_height": -0.05, "asset_cfg": SceneEntityCfg("brush")}
+        func=mdp.root_height_below_minimum, params={"minimum_height": 0.5, "asset_cfg": SceneEntityCfg("brush")}
     )
 
 
@@ -256,23 +259,49 @@ class PickPlaceEnvCfg(ManagerBasedRLEnvCfg):
                 scale=1.0,
             )
         elif mode in ['mimic_ik']:
-            self.actions.arm_action = DifferentialInverseKinematicsActionCfg(
+            self.actions.arm_l_action = DifferentialInverseKinematicsActionCfg(
                 asset_name="robot",
-                joint_names=["joint[1-6]"],
-                body_name="link6",
+                joint_names=["arm_l_joint[1-7]"],
+                body_name="arm_l_link7",
                 controller=DifferentialIKControllerCfg(
                     command_type="pose", ik_params={"lambda_val": 0.05},
                     ik_method="dls",
                     use_relative_mode=False
                 ),
-                body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(pos=[0.0, -0.248, 0.0]),
+                body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(pos=[0.0, 0.0, -0.2]),
             )
-            self.actions.gripper_action = mdp.JointPositionActionCfg(
+            self.actions.arm_r_action = DifferentialInverseKinematicsActionCfg(
                 asset_name="robot",
-                joint_names=["rh_r1_joint"],
+                joint_names=["arm_r_joint[1-7]"],
+                body_name="arm_r_link7",
+                controller=DifferentialIKControllerCfg(
+                    command_type="pose", ik_params={"lambda_val": 0.05},
+                    ik_method="dls",
+                    use_relative_mode=False
+                ),
+                body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(pos=[0.0, 0.0, -0.2]),
+            )
+            self.actions.gripper_l_action = mdp.JointPositionActionCfg(
+                asset_name="robot",
+                joint_names=["gripper_l_joint1"],
                 scale=1.0,
                 use_default_offset=False,
             )
+            self.actions.gripper_r_action = mdp.JointPositionActionCfg(
+                asset_name="robot",
+                joint_names=["gripper_r_joint1"],
+                scale=1.0,
+                use_default_offset=False,
+            )
+            self.actions.lift_action = mdp.JointPositionActionCfg(
+                asset_name="robot",
+                joint_names=["lift_joint"],
+                scale=1.0,
+            )
+            self.actions.head_action = mdp.JointPositionActionCfg(
+                asset_name="robot",
+                joint_names=["head_joint1", "head_joint2"],
+                scale=1.0,
+            )
         else:
-            self.actions.arm_action = None
-            self.actions.gripper_action = None
+            raise ValueError(f"Unknown action mode: {mode}")

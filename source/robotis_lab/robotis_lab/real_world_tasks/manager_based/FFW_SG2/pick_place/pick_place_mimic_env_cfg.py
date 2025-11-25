@@ -22,11 +22,11 @@
 from isaaclab.envs.mimic_env_cfg import MimicEnvCfg, SubTaskConfig
 from isaaclab.utils import configclass
 
-from .joint_pos_env_cfg import OMYBrushPickPlaceEnvCfg
+from .joint_pos_env_cfg import FFWSG2PickPlaceEnvCfg
 
 
 @configclass
-class OMYPickPlaceMimicEnvCfg(OMYBrushPickPlaceEnvCfg, MimicEnvCfg):
+class FFWSG2PickPlaceMimicEnvCfg(FFWSG2PickPlaceEnvCfg, MimicEnvCfg):
     """
     Configuration for the pick_place task with mimic environment.
     """
@@ -105,4 +105,4 @@ class OMYPickPlaceMimicEnvCfg(OMYBrushPickPlaceEnvCfg, MimicEnvCfg):
                 apply_noise_during_interpolation=False,
             )
         )
-        self.subtask_configs["OMY"] = subtask_configs
+        self.subtask_configs["right_ee_frame_state"] = subtask_configs

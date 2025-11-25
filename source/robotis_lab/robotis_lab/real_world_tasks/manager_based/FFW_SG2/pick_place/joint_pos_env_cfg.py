@@ -78,12 +78,12 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (-0.01, 0.01),
-                "y": (-0.01, 0.01),
+                "x": (-0.02, 0.02),
+                "y": (-0.02, 0.02),
                 "z": (0.0, 0.0),
                 "roll": (0.0, 0.0),
                 "pitch": (0.0, 0.0),
-                "yaw": (-0.02, 0.02),
+                "yaw": (-0.03, 0.03),
             },
             "asset_cfg": SceneEntityCfg("robot"),
         },
@@ -93,7 +93,7 @@ class EventCfg:
         func=ffw_sg2_pick_place_events.randomize_object_pose,
         mode="reset",
         params={
-            "pose_range": {"x": (0.57, 0.59), "y": (0.0, 0.0), "z": (1.3, 1.3)},
+            "pose_range": {"x": (0.575, 0.585), "y": (-0.015, -0.015), "z": (1.38, 1.38)},
             "min_separation": 0.1,
             "asset_cfgs": [SceneEntityCfg("brush")],
         },
@@ -151,36 +151,36 @@ class FFWSG2PickPlaceEnvCfg(PickPlaceEnvCfg):
         # Add semantics to ground
         self.scene.plane.semantic_tags = [("class", "ground")]
 
-        self.scene.cam_wrist_right = CameraCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_r_link7/camera_r_bottom_screw_frame/camera_r_link/cam_wrist_right",
-            update_period=0.0,
-            height=480,
-            width=848,
-            data_types=["rgb"],
-            spawn=sim_utils.PinholeCameraCfg(
-                focal_length=10.0, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
-            ),
-            offset=CameraCfg.OffsetCfg(
-                pos=(0.0, 0.0, 0.0),
-                rot=(0.5, 0.5, -0.5, -0.5),
-                convention="isaac",
-            )
-        )
-        self.scene.cam_wrist_left = CameraCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_l_link7/camera_l_bottom_screw_frame/camera_l_link/cam_wrist_left",
-            update_period=0.0,
-            height=480,
-            width=848,
-            data_types=["rgb"],
-            spawn=sim_utils.PinholeCameraCfg(
-                focal_length=10.0, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
-            ),
-            offset=CameraCfg.OffsetCfg(
-                pos=(0.0, 0.0, 0.0),
-                rot=(0.5, 0.5, -0.5, -0.5),
-                convention="isaac",
-            )
-        )
+        # self.scene.cam_wrist_right = CameraCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_r_link7/camera_r_bottom_screw_frame/camera_r_link/cam_wrist_right",
+        #     update_period=0.0,
+        #     height=480,
+        #     width=848,
+        #     data_types=["rgb"],
+        #     spawn=sim_utils.PinholeCameraCfg(
+        #         focal_length=10.0, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
+        #     ),
+        #     offset=CameraCfg.OffsetCfg(
+        #         pos=(0.0, 0.0, 0.0),
+        #         rot=(0.5, 0.5, -0.5, -0.5),
+        #         convention="isaac",
+        #     )
+        # )
+        # self.scene.cam_wrist_left = CameraCfg(
+        #     prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_l_link7/camera_l_bottom_screw_frame/camera_l_link/cam_wrist_left",
+        #     update_period=0.0,
+        #     height=480,
+        #     width=848,
+        #     data_types=["rgb"],
+        #     spawn=sim_utils.PinholeCameraCfg(
+        #         focal_length=10.0, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
+        #     ),
+        #     offset=CameraCfg.OffsetCfg(
+        #         pos=(0.0, 0.0, 0.0),
+        #         rot=(0.5, 0.5, -0.5, -0.5),
+        #         convention="isaac",
+        #     )
+        # )
         self.scene.cam_head_left = CameraCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/head_link2/zed/cam_head_left",
             update_period=0.0,
@@ -195,4 +195,38 @@ class FFWSG2PickPlaceEnvCfg(PickPlaceEnvCfg):
                 rot=(0.5, 0.5, -0.5, -0.5),
                 convention="isaac",
             )
+        )
+
+        # Listens to the required transforms
+        marker_cfg = FRAME_MARKER_CFG.copy()
+        marker_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+        marker_cfg.prim_path = "/Visuals/FrameTransformer"
+        self.scene.right_ee_frame = FrameTransformerCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_base_link",
+            debug_vis=False,
+            visualizer_cfg=marker_cfg,
+            target_frames=[
+                FrameTransformerCfg.FrameCfg(
+                    prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_r_link7",
+                    name="end_effector",
+                    offset=OffsetCfg(
+                        pos=[0.0, 0.0, -0.2],
+                    ),
+                ),
+            ],
+        )
+
+        self.scene.left_ee_frame = FrameTransformerCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_base_link",
+            debug_vis=False,
+            visualizer_cfg=marker_cfg,
+            target_frames=[
+                FrameTransformerCfg.FrameCfg(
+                    prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_l_link7",
+                    name="end_effector",
+                    offset=OffsetCfg(
+                        pos=[0.0, 0.0, -0.2],
+                    ),
+                ),
+            ],
         )

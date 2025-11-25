@@ -47,8 +47,8 @@ FFW_SG2_CFG = ArticulationCfg(
             **{f"arm_r_joint{i + 1}": 0.0 for i in range(7)},
 
             # Left and right gripper joints
-            "gripper_l_joint1": 0.0,
-            "gripper_r_joint1": 0.0,
+            **{f"gripper_l_joint{i + 1}": 0.0 for i in range(4)},
+            **{f"gripper_r_joint{i + 1}": 0.0 for i in range(4)},
 
             # Head joints
             "head_joint1": 0.0,
@@ -100,7 +100,7 @@ FFW_SG2_CFG = ArticulationCfg(
                 "gripper_r_joint1",
             ],
             velocity_limit_sim=6.0,
-            effort_limit_sim=30.0,
+            effort_limit_sim=8.0,
             stiffness=20.0,
             damping=5.0,
         ),

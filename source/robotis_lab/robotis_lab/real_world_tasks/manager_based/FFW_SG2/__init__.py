@@ -19,7 +19,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""FFW-SG2 environments for fixed-arm robots."""
+"""FFW SG2 environments for fixed-arm robots."""
 
 import gymnasium as gym
 from .pick_place import *  # noqa

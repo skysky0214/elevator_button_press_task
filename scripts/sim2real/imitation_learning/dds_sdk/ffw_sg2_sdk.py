@@ -325,9 +325,12 @@ class FFWSG2Sdk:
         """Publish camera image as DDS compressed image."""
         try:
             cam_data = self.env.scene[cam_name].data
-            img = cam_data.output['rgb'][0].cpu().numpy()  # Convert tensor to numpy
+            img = cam_data.output['rgb'][0].cpu().numpy()  # Convert tensor to numpy (RGB format)
+            
+            # Convert RGB to BGR for OpenCV encoding
+            img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-            _, buffer = cv2.imencode('.jpg', img)
+            _, buffer = cv2.imencode('.jpg', img_bgr)
             jpeg_bytes = buffer.tobytes()
 
             now = datetime.now()
@@ -401,8 +404,8 @@ class FFWSG2Sdk:
         """Publish joint states and camera images."""
         self._publish_joint_states()
         self._publish_camera("cam_head_left")
-        self._publish_camera("cam_wrist_right")
-        self._publish_camera("cam_wrist_left")
+        # self._publish_camera("cam_wrist_right")
+        # self._publish_camera("cam_wrist_left")
 
     # ----------------------
     # Utility

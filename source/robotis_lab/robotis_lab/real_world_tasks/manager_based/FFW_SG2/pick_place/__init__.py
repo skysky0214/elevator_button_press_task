@@ -33,3 +33,12 @@ gym.register(
     },
     disable_env_checker=True,
 )
+
+gym.register(
+    id="RobotisLab-Real-Mimic-Pick-Place-FFW-SG2-v0",
+    entry_point="robotis_lab.real_world_tasks.manager_based.FFW_SG2.pick_place.pick_place_mimic_env:FFWSG2PickPlaceMimicEnv",
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.pick_place_mimic_env_cfg:FFWSG2PickPlaceMimicEnvCfg",
+    },
+    disable_env_checker=True,
+)
