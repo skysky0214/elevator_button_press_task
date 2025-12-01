@@ -57,7 +57,8 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     basket: AssetBaseCfg = MISSING
     table: AssetBaseCfg = MISSING
     silicone: AssetBaseCfg = MISSING
-    tooth_brush: AssetBaseCfg = MISSING
+    scissors: AssetBaseCfg = MISSING
+    driver: AssetBaseCfg = MISSING
 
     # cam_wrist_right: CameraCfg = MISSING
     # cam_wrist_left: CameraCfg = MISSING
