@@ -140,7 +140,7 @@ start_container() {
     # Check if container exists but is stopped
     if [ -n "$(docker ps -aq --filter "name=^robotis_lab${DOCKER_NAME_SUFFIX}$")" ]; then
         echo "[INFO] Starting existing container..."
-        docker compose ${X11_COMPOSE_FILE} start robotis_lab
+        docker start robotis_lab${DOCKER_NAME_SUFFIX}
     else
         echo "[INFO] Creating and starting new container..."
         docker compose -f docker-compose.yaml ${X11_COMPOSE_FILE} up -d robotis_lab

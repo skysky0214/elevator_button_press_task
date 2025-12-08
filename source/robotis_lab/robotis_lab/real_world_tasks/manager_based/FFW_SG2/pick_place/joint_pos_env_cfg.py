@@ -83,12 +83,12 @@ class EventCfg:
         mode="reset",
         params={
             "pose_range": {
-                "x": (-0.06, -0.02),
-                "y": (-0.02, 0.02),
+                "x": (0.0, 0.0),
+                "y": (0.0, 0.0),
                 "z": (0.0, 0.0),
                 "roll": (0.0, 0.0),
                 "pitch": (0.0, 0.0),
-                "yaw": (-0.03, 0.03),
+                "yaw": (0.0, 0.0),
             },
             "asset_cfg": SceneEntityCfg("robot"),
         },
@@ -98,7 +98,7 @@ class EventCfg:
         func=ffw_sg2_pick_place_events.randomize_object_pose,
         mode="reset",
         params={
-            "pose_range": {"x": (0.56, 0.58), "y": (0.26, 0.26), "z": (0.96, 0.96)},
+            "pose_range": {"x": (0.55, 0.56), "y": (0.26, 0.26), "z": (0.95, 0.95)},
             "min_separation": 0.1,
             "asset_cfgs": [SceneEntityCfg("brush")],
         },
@@ -108,7 +108,7 @@ class EventCfg:
         func=ffw_sg2_pick_place_events.randomize_object_pose,
         mode="reset",
         params={
-            "pose_range": {"x": (0.56, 0.58), "y": (0.087, 0.087), "z": (0.96, 0.96)},
+            "pose_range": {"x": (0.55, 0.56), "y": (0.087, 0.087), "z": (0.95, 0.95)},
             "min_separation": 0.1,
             "asset_cfgs": [SceneEntityCfg("driver")],
         },
@@ -118,7 +118,7 @@ class EventCfg:
         func=ffw_sg2_pick_place_events.randomize_object_pose,
         mode="reset",
         params={
-            "pose_range": {"x": (0.56, 0.58), "y": (0.26, 0.26), "z": (1.245, 1.245)},
+            "pose_range": {"x": (0.55, 0.56), "y": (0.26, 0.26), "z": (1.235, 1.235)},
             "min_separation": 0.1,
             "asset_cfgs": [SceneEntityCfg("silicone")],
         },
@@ -128,7 +128,7 @@ class EventCfg:
         func=ffw_sg2_pick_place_events.randomize_object_pose,
         mode="reset",
         params={
-            "pose_range": {"x": (0.56, 0.58), "y": (0.087, 0.087), "z": (1.245, 1.245)},
+            "pose_range": {"x": (0.55, 0.56), "y": (0.087, 0.087), "z": (1.235, 1.235)},
             "min_separation": 0.1,
             "asset_cfgs": [SceneEntityCfg("scissors")],
         },
@@ -138,7 +138,7 @@ class EventCfg:
         func=ffw_sg2_pick_place_events.randomize_object_pose,
         mode="reset",
         params={
-            "pose_range": {"x": (0.41, 0.44), "y": (-0.02, 0.02), "z": (0.73, 0.73), "yaw": (-0.03, 0.03)},
+            "pose_range": {"x": (0.41, 0.41), "y": (0.0, 0.0), "z": (0.72, 0.72), "yaw": (0.0, 0.0)},
             "min_separation": 0.1,
             "asset_cfgs": [SceneEntityCfg("basket")],
         },

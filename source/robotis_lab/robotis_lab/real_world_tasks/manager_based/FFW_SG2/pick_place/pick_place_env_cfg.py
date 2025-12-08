@@ -144,34 +144,9 @@ class ObservationsCfg:
     class SubtaskCfg(ObsGroup):
         """Observations for subtask group."""
 
-        # grasp_brush = ObsTerm(
-        #     func=mdp.object_grasped,
-        #     params={
-        #         "robot_cfg": SceneEntityCfg("robot"),
-        #         "eef_cfg": SceneEntityCfg("right_eef"),
-        #         "object_cfg": SceneEntityCfg("brush"),
-        #         "gripper_joint_name": "gripper_r_joint1",
-        #     },
-        # )
-
-        grasp_object = ObsTerm(
-            func=mdp.object_grasped,
-            params={
-                "robot_cfg": SceneEntityCfg("robot"),
-                "eef_cfg": SceneEntityCfg("left_eef"),
-                "object_cfg": SceneEntityCfg("silicone"),
-                "gripper_joint_name": "gripper_l_joint1",
-            },
-        )
-
-        object_in_basket = ObsTerm(
-            func=mdp.object_in_basket,
-            params={
-                "object_cfg": SceneEntityCfg("silicone"),
-                "basket_cfg": SceneEntityCfg("basket"),
-                "distance_threshold": 0.15,
-            },
-        )
+        # Note: object_cfg will be set dynamically based on target_object in __post_init__
+        grasp_object = None
+        object_in_basket = None
 
         def __post_init__(self):
             self.enable_corruption = False
@@ -188,18 +163,17 @@ class TerminationsCfg:
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
-    success = DoneTerm(
-        func=mdp.task_done, params={"object_cfg": SceneEntityCfg("silicone"), "basket_cfg": SceneEntityCfg("basket"), "distance_threshold": 0.15}
-    )
-
-    object_dropped = DoneTerm(
-        func=mdp.object_dropped, params={"object_cfg": SceneEntityCfg("silicone"), "velocity_threshold": 2.0}
-    )
+    # Note: success and object_dropped will be set dynamically based on target_object in __post_init__
+    success = None
+    object_dropped = None
 
 
 @configclass
 class PickPlaceEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the pick and place environment."""
+
+    # Target object configuration
+    target_object: str = "silicone"  # Options: "silicone", "brush", "scissors", "driver"
 
     # Scene settings
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=False)
@@ -230,6 +204,43 @@ class PickPlaceEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
+
+        # Initialize dynamic observations and terminations based on target_object
+        self.observations.subtask_terms.grasp_object = ObsTerm(
+            func=mdp.object_grasped,
+            params={
+                "robot_cfg": SceneEntityCfg("robot"),
+                "eef_cfg": SceneEntityCfg("left_eef"),
+                "object_cfg": SceneEntityCfg(self.target_object),
+                "gripper_joint_name": "gripper_l_joint1",
+            },
+        )
+
+        self.observations.subtask_terms.object_in_basket = ObsTerm(
+            func=mdp.object_in_basket,
+            params={
+                "object_cfg": SceneEntityCfg(self.target_object),
+                "basket_cfg": SceneEntityCfg("basket"),
+                "distance_threshold": 0.15,
+            },
+        )
+
+        self.terminations.success = DoneTerm(
+            func=mdp.task_done,
+            params={
+                "object_cfg": SceneEntityCfg(self.target_object),
+                "basket_cfg": SceneEntityCfg("basket"),
+                "distance_threshold": 0.15,
+            },
+        )
+
+        self.terminations.object_dropped = DoneTerm(
+            func=mdp.object_dropped,
+            params={
+                "object_cfg": SceneEntityCfg(self.target_object),
+                "velocity_threshold": 2.0,
+            },
+        )
 
     def init_action_cfg(self, mode: str):
         print(f"Initializing action configuration for device: {mode}")

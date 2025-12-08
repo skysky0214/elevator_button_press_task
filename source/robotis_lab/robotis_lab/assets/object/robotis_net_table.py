@@ -8,8 +8,8 @@ NET_TABLE_CFG = RigidObjectCfg(
         usd_path=f"{ROBOTIS_LAB_OBJECT_ASSETS_DATA_DIR}/object/robotis_net_table.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
-            linear_damping=5.0,
-            angular_damping=5.0,
+            linear_damping=2.0,
+            angular_damping=2.0,
         ),
     ),
     init_state=RigidObjectCfg.InitialStateCfg(

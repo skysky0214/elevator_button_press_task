@@ -52,25 +52,14 @@ class FFWSG2PickPlaceMimicEnvCfg(FFWSG2PickPlaceEnvCfg, MimicEnvCfg):
         # First subtask: Grasp the object
         subtask_configs.append(
             SubTaskConfig(
-                # Each subtask involves manipulation with respect to a single object frame.
-                object_ref="silicone",
-                # This key corresponds to the binary indicator in "datagen_info" that signals
-                # when this subtask is finished (e.g., on a 0 to 1 edge).
+                object_ref=self.target_object,  # Use target_object from parent config
                 subtask_term_signal="grasp_object",
-                # Specifies time offsets for data generation when splitting a trajectory into
-                # subtask segments. Random offsets are added to the termination boundary.
                 subtask_term_offset_range=(10, 20),
-                # Selection strategy for the source subtask segment during data generation
                 selection_strategy="nearest_neighbor_object",
-                # Optional parameters for the selection strategy function
                 selection_strategy_kwargs={"nn_k": 3},
-                # Amount of action noise to apply during this subtask
                 action_noise=0.003,
-                # Number of interpolation steps to bridge to this subtask segment
                 num_interpolation_steps=5,
-                # Additional fixed steps for the robot to reach the necessary pose
                 num_fixed_steps=0,
-                # If True, apply action noise during the interpolation phase and execution
                 apply_noise_during_interpolation=False,
                 description="Grasp object",
                 next_subtask_description="Place object in basket",
@@ -81,7 +70,7 @@ class FFWSG2PickPlaceMimicEnvCfg(FFWSG2PickPlaceEnvCfg, MimicEnvCfg):
             SubTaskConfig(
                 object_ref="basket",
                 subtask_term_signal="object_in_basket",
-                subtask_term_offset_range=(5, 15),
+                subtask_term_offset_range=(5, 10),
                 selection_strategy="nearest_neighbor_object",
                 selection_strategy_kwargs={"nn_k": 3},
                 action_noise=0.001,

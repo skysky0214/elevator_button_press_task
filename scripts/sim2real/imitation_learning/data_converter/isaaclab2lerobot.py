@@ -31,8 +31,8 @@ ROBOT_CONFIGS = {
     "OMY": {
         "expected_dim": 7,
         "joint_names": [
-            "joint1.pos", "joint2.pos", "joint3.pos", "joint4.pos",
-            "joint5.pos", "joint6.pos", "rh_r1_joint.pos",
+            "joint1", "joint2", "joint3", "joint4",
+            "joint5", "joint6", "rh_r1_joint",
         ],
         "cameras": {
             "cam_wrist": {"height": 480, "width": 848},
@@ -42,14 +42,14 @@ ROBOT_CONFIGS = {
     "FFW_SG2": {
         "expected_dim": 19,
         "joint_names": [
-            "arm_l_joint1.pos", "arm_l_joint2.pos", "arm_l_joint3.pos", "arm_l_joint4.pos",
-            "arm_l_joint5.pos", "arm_l_joint6.pos", "arm_l_joint7.pos", "gripper_l_joint1.pos",
-            "arm_r_joint1.pos", "arm_r_joint2.pos", "arm_r_joint3.pos", "arm_r_joint4.pos",
-            "arm_r_joint5.pos", "arm_r_joint6.pos", "arm_r_joint7.pos", "gripper_r_joint1.pos",
-            "head_joint1.pos", "head_joint2.pos", "lift_joint.pos",
+            "arm_l_joint1", "arm_l_joint2", "arm_l_joint3", "arm_l_joint4",
+            "arm_l_joint5", "arm_l_joint6", "arm_l_joint7", "gripper_l_joint1",
+            "arm_r_joint1", "arm_r_joint2", "arm_r_joint3", "arm_r_joint4",
+            "arm_r_joint5", "arm_r_joint6", "arm_r_joint7", "gripper_r_joint1",
+            "head_joint1", "head_joint2", "lift_joint",
         ],
         "cameras": {
-            "cam_head_left": {"height": 376, "width": 672},
+            "cam_head": {"height": 376, "width": 672},
         }
     }
 }
@@ -83,10 +83,10 @@ def get_env_features(fps: int, robot_type: str):
             "video_info": {
                 "video.height": cam_cfg["height"],
                 "video.width": cam_cfg["width"],
-                "video.codec": "av1",
+                "video.codec": "libx264",
                 "video.pix_fmt": "yuv420p",
                 "video.is_depth_map": False,
-                "video.fps": float(fps),
+                "video.fps": fps,
                 "video.channels": 3,
                 "has_audio": False,
             },
