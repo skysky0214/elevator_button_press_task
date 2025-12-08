@@ -325,3 +325,104 @@ def set_object_pose(
             torch.zeros(1, 6, device=env.device),
             env_ids=torch.tensor([cur_env], device=env.device)
         )
+
+
+# Pre-defined slot positions for object placement
+# Left side slots (y > 0)
+LEFT_SLOTS = [
+    (0.555, 0.26, 0.95),
+    (0.555, 0.087, 0.95),
+    (0.555, 0.26, 1.235),
+    (0.555, 0.087, 1.235),
+]
+
+# Right side slots (y < 0)
+RIGHT_SLOTS = [
+    (0.555, -0.087, 0.95),
+    (0.555, -0.26, 0.95),
+    (0.555, -0.087, 1.235),
+    (0.555, -0.26, 1.235),
+]
+
+ALL_SLOTS = LEFT_SLOTS + RIGHT_SLOTS
+
+
+def randomize_objects_on_slots(
+    env: ManagerBasedEnv,
+    env_ids: torch.Tensor,
+    target_asset_cfg: SceneEntityCfg,
+    other_asset_cfgs: list[SceneEntityCfg],
+    target_side: Literal["left", "right"] = "left",
+):
+    """
+    Randomize object positions using predefined slot positions.
+    
+    Args:
+        env: The environment instance
+        env_ids: Environment indices to reset
+        target_asset_cfg: The target object that should be placed on a specific side
+        other_asset_cfgs: Other objects that can be placed anywhere (remaining slots)
+        target_side: Which side ("left" or "right") to place the target object
+    """
+    if env_ids is None:
+        return
+
+    # Determine which slots to use for target
+    if target_side == "left":
+        target_slots = LEFT_SLOTS.copy()
+    else:
+        target_slots = RIGHT_SLOTS.copy()
+
+    # Randomize poses in each environment independently
+    for cur_env in env_ids.tolist():
+        # Make copies of slot lists to track available slots
+        available_target_slots = target_slots.copy()
+        available_all_slots = ALL_SLOTS.copy()
+
+        # 1. Place target object on its designated side
+        target_asset = env.scene[target_asset_cfg.name]
+        target_slot = random.choice(available_target_slots)
+        available_all_slots.remove(target_slot)  # Remove from all slots
+
+        # Write target pose
+        position = torch.tensor([[target_slot[0], target_slot[1], target_slot[2]]], device=env.device)
+        position = position + env.scene.env_origins[cur_env, 0:3]
+        orientation = math_utils.quat_from_euler_xyz(
+            torch.tensor([0.0], device=env.device),
+            torch.tensor([0.0], device=env.device),
+            torch.tensor([0.0], device=env.device)
+        )
+        target_asset.write_root_pose_to_sim(
+            torch.cat([position, orientation], dim=-1),
+            env_ids=torch.tensor([cur_env], device=env.device)
+        )
+        target_asset.write_root_velocity_to_sim(
+            torch.zeros(1, 6, device=env.device),
+            env_ids=torch.tensor([cur_env], device=env.device)
+        )
+
+        # 2. Place other objects on remaining slots
+        random.shuffle(available_all_slots)
+        for i, asset_cfg in enumerate(other_asset_cfgs):
+            if i >= len(available_all_slots):
+                break  # No more slots available
+            
+            asset = env.scene[asset_cfg.name]
+            slot = available_all_slots[i]
+
+            # Write pose
+            position = torch.tensor([[slot[0], slot[1], slot[2]]], device=env.device)
+            position = position + env.scene.env_origins[cur_env, 0:3]
+            orientation = math_utils.quat_from_euler_xyz(
+                torch.tensor([0.0], device=env.device),
+                torch.tensor([0.0], device=env.device),
+                torch.tensor([0.0], device=env.device)
+            )
+            asset.write_root_pose_to_sim(
+                torch.cat([position, orientation], dim=-1),
+                env_ids=torch.tensor([cur_env], device=env.device)
+            )
+            asset.write_root_velocity_to_sim(
+                torch.zeros(1, 6, device=env.device),
+                env_ids=torch.tensor([cur_env], device=env.device)
+            )

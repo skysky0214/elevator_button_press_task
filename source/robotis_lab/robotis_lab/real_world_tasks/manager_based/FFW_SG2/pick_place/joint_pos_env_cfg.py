@@ -42,9 +42,7 @@ from robotis_lab.assets.object.silicone_tube_ring import SILICONE_TUBE_RING_CFG
 from robotis_lab.assets.object.pliers_ring import PLIERS_RING_CFG
 from robotis_lab.assets.object.scissors_ring import SCISSORS_RING_CFG
 from robotis_lab.assets.object.screw_driver_ring import SCREW_DRIVER_RING_CFG
-
-import math
-
+from robotis_lab.assets.object.tooth_brush import TOOTH_BRUSH_CFG
 
 @configclass
 class EventCfg:
@@ -94,45 +92,9 @@ class EventCfg:
         },
     )
 
-    randomize_brush_positions = EventTerm(
-        func=ffw_sg2_pick_place_events.randomize_object_pose,
-        mode="reset",
-        params={
-            "pose_range": {"x": (0.55, 0.56), "y": (0.26, 0.26), "z": (0.95, 0.95)},
-            "min_separation": 0.1,
-            "asset_cfgs": [SceneEntityCfg("brush")],
-        },
-    )
-
-    randomize_driver_positions = EventTerm(
-        func=ffw_sg2_pick_place_events.randomize_object_pose,
-        mode="reset",
-        params={
-            "pose_range": {"x": (0.55, 0.56), "y": (0.087, 0.087), "z": (0.95, 0.95)},
-            "min_separation": 0.1,
-            "asset_cfgs": [SceneEntityCfg("driver")],
-        },
-    )
-
-    randomize_silicone_positions = EventTerm(
-        func=ffw_sg2_pick_place_events.randomize_object_pose,
-        mode="reset",
-        params={
-            "pose_range": {"x": (0.55, 0.56), "y": (0.26, 0.26), "z": (1.235, 1.235)},
-            "min_separation": 0.1,
-            "asset_cfgs": [SceneEntityCfg("silicone")],
-        },
-    )
-
-    randomize_scissors_positions = EventTerm(
-        func=ffw_sg2_pick_place_events.randomize_object_pose,
-        mode="reset",
-        params={
-            "pose_range": {"x": (0.55, 0.56), "y": (0.087, 0.087), "z": (1.235, 1.235)},
-            "min_separation": 0.1,
-            "asset_cfgs": [SceneEntityCfg("scissors")],
-        },
-    )
+    # Randomize objects on predefined slots
+    # Will be set dynamically in FFWSG2PickPlaceEnvCfg based on target_object and target_side
+    randomize_object_positions = None
 
     randomize_basket_positions = EventTerm(
         func=ffw_sg2_pick_place_events.randomize_object_pose,
@@ -162,8 +124,6 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("light"),
         },
     )
-
-
 @configclass
 class FFWSG2PickPlaceEnvCfg(PickPlaceEnvCfg):
     def __post_init__(self):
@@ -173,16 +133,31 @@ class FFWSG2PickPlaceEnvCfg(PickPlaceEnvCfg):
         # Set events
         self.events = EventCfg()
 
+        # Dynamically set randomize_object_positions based on target_object and target_side
+        # target_object is placed on target_side, others are placed randomly on remaining slots
+        other_objects = [obj for obj in self.all_objects if obj != self.target_object]
+        self.events.randomize_object_positions = EventTerm(
+            func=ffw_sg2_pick_place_events.randomize_objects_on_slots,
+            mode="reset",
+            params={
+                "target_asset_cfg": SceneEntityCfg(self.target_object),
+                "other_asset_cfgs": [SceneEntityCfg(obj) for obj in other_objects],
+                "target_side": self.target_side,
+            },
+        )
+
         # Set FFWSG2 as robot
         self.scene.robot = FFW_SG2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.robot.spawn.semantic_tags = [("class", "robot")]
 
-        # Set table
+        # Set objects in the scene
         self.scene.table = NET_TABLE_CFG.replace(prim_path="{ENV_REGEX_NS}/Table")
         self.scene.brush = BRUSH_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/Brush")
+        self.scene.pliers = PLIERS_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/Pliers")
         self.scene.silicone = SILICONE_TUBE_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/SiliconeTube")
         self.scene.scissors = SCISSORS_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/Scissors")
         self.scene.driver = SCREW_DRIVER_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/ScrewDriver")
+        self.scene.tooth_brush = TOOTH_BRUSH_CFG.replace(prim_path="{ENV_REGEX_NS}/ToothBrush")
         self.scene.basket = PLASTIC_BASKET2_CFG.replace(prim_path="{ENV_REGEX_NS}/Basket")
 
         # Add semantics to ground
@@ -242,7 +217,7 @@ class FFWSG2PickPlaceEnvCfg(PickPlaceEnvCfg):
         self.scene.right_eef = FrameTransformerCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_base_link",
             debug_vis=False,
-            visualizer_cfg=marker_cfg,
+            visualizer_cfg=marker_cfg,  
             target_frames=[
                 FrameTransformerCfg.FrameCfg(
                     prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_r_link7",

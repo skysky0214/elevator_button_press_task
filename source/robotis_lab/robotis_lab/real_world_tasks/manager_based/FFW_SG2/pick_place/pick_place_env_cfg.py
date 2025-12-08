@@ -172,8 +172,12 @@ class TerminationsCfg:
 class PickPlaceEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the pick and place environment."""
 
+    # All available objects for randomization
+    all_objects: list = ["brush", "driver", "scissors", "pliers", "tooth_brush", "silicone"]
     # Target object configuration
-    target_object: str = "silicone"  # Options: "silicone", "brush", "scissors", "driver"
+    target_object: str = "brush"  # Options: "silicone", "brush", "scissors", "driver", "pliers", "tooth_brush"
+    # Target side configuration: which side to place the target object
+    target_side: str = "left"  # Options: "left", "right"
 
     # Scene settings
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=False)

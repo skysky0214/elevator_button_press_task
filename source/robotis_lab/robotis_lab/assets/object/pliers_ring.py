@@ -8,8 +8,8 @@ PLIERS_RING_CFG = RigidObjectCfg(
         usd_path=f"{ROBOTIS_LAB_OBJECT_ASSETS_DATA_DIR}/object/pliers_ring.usd",
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
-            linear_damping=5.0,
-            angular_damping=5.0,
+            linear_damping=3.0,
+            angular_damping=3.0,
         ),
     ),
     init_state=RigidObjectCfg.InitialStateCfg(
