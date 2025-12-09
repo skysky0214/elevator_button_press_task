@@ -60,9 +60,10 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     scissors: AssetBaseCfg = MISSING
     driver: AssetBaseCfg = MISSING
 
-    # cam_wrist_right: CameraCfg = MISSING
-    # cam_wrist_left: CameraCfg = MISSING
     cam_head: CameraCfg = MISSING
+
+    # Background cube for color randomization
+    background_cube: AssetBaseCfg = MISSING
 
     # plane
     plane = AssetBaseCfg(
@@ -122,15 +123,6 @@ class ObservationsCfg:
         left_eef_pose = ObsTerm(func=mdp.eef_pose, params={"eef_cfg": SceneEntityCfg("left_eef"), "robot_cfg": SceneEntityCfg("robot")})
         right_eef_pose = ObsTerm(func=mdp.eef_pose, params={"eef_cfg": SceneEntityCfg("right_eef"), "robot_cfg": SceneEntityCfg("robot")})
 
-        # cam_wrist_left = ObsTerm(
-        #     func=mdp.image,
-        #     params={"sensor_cfg": SceneEntityCfg("cam_wrist_left"), "data_type": "rgb", "normalize": False},
-        # )
-        # cam_wrist_right = ObsTerm(
-        #     func=mdp.image,
-        #     params={"sensor_cfg": SceneEntityCfg("cam_wrist_right"), "data_type": "rgb", "normalize": False},
-        # )
-
         cam_head = ObsTerm(
             func=mdp.image,
             params={"sensor_cfg": SceneEntityCfg("cam_head"), "data_type": "rgb", "normalize": False},
@@ -177,7 +169,7 @@ class PickPlaceEnvCfg(ManagerBasedRLEnvCfg):
     # Target object configuration
     target_object: str = "brush"  # Options: "silicone", "brush", "scissors", "driver", "pliers", "tooth_brush"
     # Target side configuration: which side to place the target object
-    target_side: str = "left"  # Options: "left", "right"
+    target_side: str = "right"  # Options: "left", "right"
 
     # Scene settings
     scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=False)
@@ -209,14 +201,22 @@ class PickPlaceEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
 
+        # Determine eef and gripper based on target_side
+        if self.target_side == "left":
+            eef_name = "left_eef"
+            gripper_joint_name = "gripper_l_joint1"
+        else:  # right
+            eef_name = "right_eef"
+            gripper_joint_name = "gripper_r_joint1"
+
         # Initialize dynamic observations and terminations based on target_object
         self.observations.subtask_terms.grasp_object = ObsTerm(
             func=mdp.object_grasped,
             params={
                 "robot_cfg": SceneEntityCfg("robot"),
-                "eef_cfg": SceneEntityCfg("left_eef"),
+                "eef_cfg": SceneEntityCfg(eef_name),
                 "object_cfg": SceneEntityCfg(self.target_object),
-                "gripper_joint_name": "gripper_l_joint1",
+                "gripper_joint_name": gripper_joint_name,
             },
         )
 

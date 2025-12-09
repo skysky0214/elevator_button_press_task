@@ -43,22 +43,27 @@ from robotis_lab.assets.object.pliers_ring import PLIERS_RING_CFG
 from robotis_lab.assets.object.scissors_ring import SCISSORS_RING_CFG
 from robotis_lab.assets.object.screw_driver_ring import SCREW_DRIVER_RING_CFG
 from robotis_lab.assets.object.tooth_brush import TOOTH_BRUSH_CFG
+from robotis_lab.assets.object.background_cube import BACKGROUND_CUBE_CFG
 
 @configclass
 class EventCfg:
-    """Configuration for events."""
+    """Configuration for reset events.
+    
+    Events are organized in the following order:
+    1. Robot state initialization
+    2. Scene object placement (table + objects moving together)
+    3. Visual domain randomization (background color, lighting)
+    """
 
+    # ========== Robot State Initialization ==========
     set_robot_joint_pose = EventTerm(
         func=ffw_sg2_pick_place_events.set_default_joint_pose,
         mode="reset",
         params={
             "joint_positions": {
-                "arm_l_joint1": 0.75,
-                "arm_l_joint4": -2.30,
-                "arm_r_joint1": 0.75,
-                "arm_r_joint4": -2.30,
-                "head_joint1": 0.549,
-                "lift_joint": -0.0993,
+                "arm_l_joint1": 0.75, "arm_l_joint4": -2.30,
+                "arm_r_joint1": 0.75, "arm_r_joint4": -2.30,
+                "head_joint1": 0.549, "lift_joint": -0.0993,
             },
             "asset_cfg": SceneEntityCfg("robot"),
         },
@@ -70,48 +75,28 @@ class EventCfg:
         params={
             "mean": 0.0,
             "std": 0.03,
-            "joint_names": ["arm_l_joint1", "arm_l_joint2", "arm_l_joint3", "arm_l_joint4", "arm_l_joint5", "arm_l_joint6", "arm_l_joint7",
-                            "arm_r_joint1", "arm_r_joint2", "arm_r_joint3", "arm_r_joint4", "arm_r_joint5", "arm_r_joint6", "arm_r_joint7"],
+            "joint_names": [
+                "arm_l_joint1", "arm_l_joint2", "arm_l_joint3", "arm_l_joint4",
+                "arm_l_joint5", "arm_l_joint6", "arm_l_joint7",
+                "arm_r_joint1", "arm_r_joint2", "arm_r_joint3", "arm_r_joint4",
+                "arm_r_joint5", "arm_r_joint6", "arm_r_joint7",
+            ],
             "asset_cfg": SceneEntityCfg("robot"),
         },
     )
 
-    randomize_robot_base_pose = EventTerm(
-        func=ffw_sg2_pick_place_events.randomize_robot_base_pose,
+    # ========== Scene Object Placement ==========
+    # Note: randomize_table_with_objects is set dynamically in __post_init__
+    # to include the correct target object and other objects
+    randomize_table_with_objects: EventTerm | None = None
+
+    # ========== Visual Domain Randomization ==========
+    randomize_background_color = EventTerm(
+        func=ffw_sg2_pick_place_events.randomize_background_color,
         mode="reset",
         params={
-            "pose_range": {
-                "x": (0.0, 0.0),
-                "y": (0.0, 0.0),
-                "z": (0.0, 0.0),
-                "roll": (0.0, 0.0),
-                "pitch": (0.0, 0.0),
-                "yaw": (0.0, 0.0),
-            },
-            "asset_cfg": SceneEntityCfg("robot"),
-        },
-    )
-
-    # Randomize objects on predefined slots
-    # Will be set dynamically in FFWSG2PickPlaceEnvCfg based on target_object and target_side
-    randomize_object_positions = None
-
-    randomize_basket_positions = EventTerm(
-        func=ffw_sg2_pick_place_events.randomize_object_pose,
-        mode="reset",
-        params={
-            "pose_range": {"x": (0.41, 0.41), "y": (0.0, 0.0), "z": (0.72, 0.72), "yaw": (0.0, 0.0)},
-            "min_separation": 0.1,
-            "asset_cfgs": [SceneEntityCfg("basket")],
-        },
-    )
-
-    set_net_table_position = EventTerm(
-        func=ffw_sg2_pick_place_events.set_object_pose,
-        mode="reset",
-        params={
-            "pose": {"x": 0.0, "y": 0.0, "z": 0.0},
-            "asset_cfg": SceneEntityCfg("table"),
+            "asset_cfg": SceneEntityCfg("background_cube"),
+            "color_range": ((0.0, 1.0), (0.0, 1.0), (0.0, 1.0)),
         },
     )
 
@@ -127,72 +112,52 @@ class EventCfg:
 @configclass
 class FFWSG2PickPlaceEnvCfg(PickPlaceEnvCfg):
     def __post_init__(self):
-        # post init of parent
         super().__post_init__()
-
-        # Set events
         self.events = EventCfg()
 
-        # Dynamically set randomize_object_positions based on target_object and target_side
-        # target_object is placed on target_side, others are placed randomly on remaining slots
+        # Configure table randomization with all objects moving together
+        # This maintains relative positions for correct trajectory augmentation
         other_objects = [obj for obj in self.all_objects if obj != self.target_object]
-        self.events.randomize_object_positions = EventTerm(
-            func=ffw_sg2_pick_place_events.randomize_objects_on_slots,
+        self.events.randomize_table_with_objects = EventTerm(
+            func=ffw_sg2_pick_place_events.randomize_table_with_objects_on_slots,
             mode="reset",
             params={
+                "table_cfg": SceneEntityCfg("table"),
+                "basket_cfg": SceneEntityCfg("basket"),
                 "target_asset_cfg": SceneEntityCfg(self.target_object),
                 "other_asset_cfgs": [SceneEntityCfg(obj) for obj in other_objects],
+                "basket_relative_pose": {"x": 0.41, "y": 0.0, "z": 0.72},
                 "target_side": self.target_side,
+                "table_pose_range": {
+                    "x": (-0.02, 0.02),
+                    "y": (-0.02, 0.02),
+                    "z": (0.0, 0.0),
+                    "roll": (0.0, 0.0),
+                    "pitch": (0.0, 0.0),
+                    "yaw": (-0.05, 0.05),  # ±~3 degrees
+                },
             },
         )
 
-        # Set FFWSG2 as robot
+        # ========== Scene Setup ==========
+        # Robot
         self.scene.robot = FFW_SG2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.robot.spawn.semantic_tags = [("class", "robot")]
 
-        # Set objects in the scene
+        # Table and Objects
         self.scene.table = NET_TABLE_CFG.replace(prim_path="{ENV_REGEX_NS}/Table")
+        self.scene.basket = PLASTIC_BASKET2_CFG.replace(prim_path="{ENV_REGEX_NS}/Basket")
         self.scene.brush = BRUSH_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/Brush")
         self.scene.pliers = PLIERS_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/Pliers")
         self.scene.silicone = SILICONE_TUBE_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/SiliconeTube")
         self.scene.scissors = SCISSORS_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/Scissors")
         self.scene.driver = SCREW_DRIVER_RING_CFG.replace(prim_path="{ENV_REGEX_NS}/ScrewDriver")
         self.scene.tooth_brush = TOOTH_BRUSH_CFG.replace(prim_path="{ENV_REGEX_NS}/ToothBrush")
-        self.scene.basket = PLASTIC_BASKET2_CFG.replace(prim_path="{ENV_REGEX_NS}/Basket")
 
-        # Add semantics to ground
+        # Visual Domain Randomization
+        self.scene.background_cube = BACKGROUND_CUBE_CFG.replace(prim_path="{ENV_REGEX_NS}/BackgroundCube")
         self.scene.plane.semantic_tags = [("class", "ground")]
 
-        # self.scene.cam_wrist_right = CameraCfg(
-        #     prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_r_link7/camera_r_bottom_screw_frame/camera_r_link/cam_wrist_right",
-        #     update_period=0.0,
-        #     height=480,
-        #     width=848,
-        #     data_types=["rgb"],
-        #     spawn=sim_utils.PinholeCameraCfg(
-        #         focal_length=10.0, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
-        #     ),
-        #     offset=CameraCfg.OffsetCfg(
-        #         pos=(0.0, 0.0, 0.0),
-        #         rot=(0.5, 0.5, -0.5, -0.5),
-        #         convention="isaac",
-        #     )
-        # )
-        # self.scene.cam_wrist_left = CameraCfg(
-        #     prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/arm_l_link7/camera_l_bottom_screw_frame/camera_l_link/cam_wrist_left",
-        #     update_period=0.0,
-        #     height=480,
-        #     width=848,
-        #     data_types=["rgb"],
-        #     spawn=sim_utils.PinholeCameraCfg(
-        #         focal_length=10.0, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
-        #     ),
-        #     offset=CameraCfg.OffsetCfg(
-        #         pos=(0.0, 0.0, 0.0),
-        #         rot=(0.5, 0.5, -0.5, -0.5),
-        #         convention="isaac",
-        #     )
-        # )
         self.scene.cam_head = CameraCfg(
             prim_path="{ENV_REGEX_NS}/Robot/ffw_sg2_follower/head_link2/zed/cam_head",
             update_period=0.0,
