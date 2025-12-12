@@ -4,7 +4,7 @@ from isaaclab.assets import RigidObjectCfg
 
 BACKGROUND_CUBE_CFG = RigidObjectCfg(
     spawn=sim_utils.CuboidCfg(
-        size=(0.1, 2.5, 2.0),  # thin, wide, tall cube as background wall
+        size=(0.1, 3.0, 2.0),  # thin, wide, tall cube as background wall
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             kinematic_enabled=True,  # Static object, no physics
             disable_gravity=True,

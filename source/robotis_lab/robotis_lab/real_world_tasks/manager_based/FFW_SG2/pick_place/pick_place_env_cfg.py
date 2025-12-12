@@ -172,7 +172,7 @@ class PickPlaceEnvCfg(ManagerBasedRLEnvCfg):
     target_side: str = "right"  # Options: "left", "right"
 
     # Scene settings
-    scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=4096, env_spacing=2.5, replicate_physics=False)
+    scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=4096, env_spacing=3.0, replicate_physics=False)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -229,14 +229,14 @@ class PickPlaceEnvCfg(ManagerBasedRLEnvCfg):
             },
         )
 
-        self.terminations.success = DoneTerm(
-            func=mdp.task_done,
-            params={
-                "object_cfg": SceneEntityCfg(self.target_object),
-                "basket_cfg": SceneEntityCfg("basket"),
-                "distance_threshold": 0.15,
-            },
-        )
+        # self.terminations.success = DoneTerm(
+        #     func=mdp.task_done,
+        #     params={
+        #         "object_cfg": SceneEntityCfg(self.target_object),
+        #         "basket_cfg": SceneEntityCfg("basket"),
+        #         "distance_threshold": 0.15,
+        #     },
+        # )
 
         self.terminations.object_dropped = DoneTerm(
             func=mdp.object_dropped,
