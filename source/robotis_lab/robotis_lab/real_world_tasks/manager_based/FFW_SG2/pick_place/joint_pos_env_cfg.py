@@ -129,7 +129,7 @@ class FFWSG2PickPlaceEnvCfg(PickPlaceEnvCfg):
                 "basket_relative_pose": {"x": 0.41, "y": 0.0, "z": 0.72},
                 "target_side": self.target_side,
                 "table_pose_range": {
-                    "x": (-0.02, 0.02),
+                    "x": (1.0, 1.0),
                     "y": (-0.02, 0.02),
                     "z": (0.0, 0.0),
                     "roll": (0.0, 0.0),

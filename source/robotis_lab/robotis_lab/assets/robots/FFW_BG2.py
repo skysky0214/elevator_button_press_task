@@ -65,15 +65,35 @@ FFW_BG2_CFG = ArticulationCfg(
         ),
 
         # Actuators for both arms
-        "arms": ImplicitActuatorCfg(
+        "DY_80": ImplicitActuatorCfg(
             joint_names_expr=[
-                "arm_l_joint[1-7]",
-                "arm_r_joint[1-7]",
+                "arm_l_joint[1-2]",
+                "arm_r_joint[1-2]",
+            ],
+            velocity_limit_sim=15.0,
+            effort_limit_sim=61.4,
+            stiffness=600.0,
+            damping=30.0,
+        ),
+        "DY_70": ImplicitActuatorCfg(
+            joint_names_expr=[
+                "arm_l_joint[3-6]",
+                "arm_r_joint[3-6]",
+            ],
+            velocity_limit_sim=15.0,
+            effort_limit_sim=31.7,
+            stiffness=600.0,
+            damping=20.0,
+        ),
+        "DP-42" : ImplicitActuatorCfg(
+            joint_names_expr=[
+                "arm_l_joint7",
+                "arm_r_joint7",
             ],
             velocity_limit_sim=6.0,
-            effort_limit_sim=100.0,
-            stiffness=120.0,
-            damping=4.0,
+            effort_limit_sim=5.1,
+            stiffness=200.0,
+            damping=3.0,
         ),
 
         # Actuators for grippers
