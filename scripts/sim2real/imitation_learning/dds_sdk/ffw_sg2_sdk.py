@@ -130,12 +130,12 @@ class FFWSG2Sdk:
     def _keyboard_controls(self):
         print("\n[Control] Press keys to control the FFW_SG2 robot:")
         if self.mode == 'record':
-            print("[N] Save successful episode and proceed to the next one")
-            print("[R] Skip failed episode (not saved) and proceed to the next one")
-            print("[B] Start recording the current episode")
+            print("[N / Right Joystick Button] Save successful episode and proceed to the next one")
+            print("[R / Left Joystick Button] Skip failed episode (not saved) and proceed to the next one")
+            print("[B / Right Joystick Button] Start recording the current episode")
         elif self.mode == 'inference':
             print("[R] Skip failed episode (not saved) and proceed to the next one")
-            print("[B] Start/Resume robot control")
+            print("[B] Start robot control")
 
     def _on_press(self, key):
         try:
