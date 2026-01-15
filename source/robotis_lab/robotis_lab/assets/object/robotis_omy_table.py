@@ -9,7 +9,6 @@ OMY_TABLE_CFG = RigidObjectCfg(
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=True,
         ),
-        activate_contact_sensors=True,
     ),
     init_state=RigidObjectCfg.InitialStateCfg(
         pos=[0.0, 0.0, 0.0],

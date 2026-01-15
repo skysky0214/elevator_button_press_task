@@ -31,7 +31,7 @@ from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="robotis_lab teleoperation for robotis_lab environments.")
-parser.add_argument("--robot_type", type=str, default="keyboard", choices=['OMY'], help="Type of robot to use for teleoperation.")
+parser.add_argument("--robot_type", type=str, default="keyboard", choices=['OMY', 'FFW_SG2'], help="Type of robot to use for teleoperation.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=42, help="Seed for the environment.")
 
@@ -139,9 +139,12 @@ def main():
     if args_cli.robot_type == "OMY":
         from dds_sdk.omy_sdk import OMYSdk
         teleop_interface = OMYSdk(env, mode='record')
+    elif args_cli.robot_type == "FFW_SG2":
+        from dds_sdk.ffw_sg2_sdk import FFWSG2Sdk
+        teleop_interface = FFWSG2Sdk(env, mode='record')
     else:
         raise ValueError(
-            f"Invalid device interface '{args_cli.robot_type}'. Supported: 'OMY'."
+            f"Invalid device interface '{args_cli.robot_type}'. Supported: 'OMY', 'FFW_SG2'."
         )
 
     # add teleoperation key for env reset

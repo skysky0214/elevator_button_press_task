@@ -1,4 +1,34 @@
 # Changelog for package robotis_lab
+1.1.0 (2025-12-15)
+------------------
+Added
+^^^^^
+* FFW_SG2 Sim2Real Imitation Learning Pipeline:
+    * Implemented full sim2real pipeline for FFW_SG2 dual-arm humanoid robot
+    * Added ``ffw_sg2_sdk.py`` DDS SDK for real robot teleoperation and state publishing
+    * Created pick-and-place task environment with dual-arm support (``FFW_SG2/pick_place/``)
+    * Implemented MDP components: observations, terminations, and event handlers for pick-and-place task
+    * Added support for data recording, sub-task annotation, action conversion, and LeRobot dataset export
+* New 3D Object Assets:
+    * brush_ring, pliers_ring, scissors_ring, screw_driver_ring, silicone_tube_ring, tooth_brush
+    * plastic_basket2, robotis_net_table
+    * background_cube for visual domain randomization
+    * Added corresponding texture files (AO, normal, diffuse maps) for all new objects
+* Documentation:
+    * Updated README with inference command for simulation
+    * Updated keyboard control instructions for FFW_SG2 robot including joystick button mappings
+
+Fixed
+^^^^^
+* Actuator Configuration Improvements:
+    * Tuned actuator parameters (stiffness, damping, effort limits) for FFW_SG2, FFW_BG2, and OMY robots for improved simulation-to-real transfer
+    * Split arm actuators into motor-specific groups (DY_80, DY_70, DP-42) matching real hardware specifications
+    * Adjusted solver iteration counts for better physics stability
+* Updated FFW_BG2.usd, FFW_SG2.usd, and OMY.usd for enhanced simulation fidelity
+* Renamed camera references from ``cam_head_left`` to ``cam_head`` for consistency
+* Updated ``robotis_dds_python`` submodule to latest version
+
+* Contributors: Taehyeong Kim
 
 1.0.0 (2025-11-17)
 ------------------
