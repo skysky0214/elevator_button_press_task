@@ -59,24 +59,24 @@ def task_done(env: ManagerBasedRLEnv, object_cfg: SceneEntityCfg, basket_cfg: Sc
 def object_dropped(env: ManagerBasedRLEnv, object_cfg: SceneEntityCfg, velocity_threshold: float = 1.0) -> torch.Tensor:
     """
     Failure = object is falling with velocity exceeding threshold.
-    
+
     Args:
         env: The RL environment.
         object_cfg: Configuration for the object.
         velocity_threshold: Maximum allowed velocity magnitude (m/s).
-    
+
     Returns:
         Boolean tensor indicating which environments have dropped the object.
     """
     object: RigidObject = env.scene[object_cfg.name]
-    
+
     # Get linear velocity of the object
     object_vel = object.data.root_lin_vel_w
-    
+
     # Calculate velocity magnitude (3D vector norm)
     velocity_magnitude = torch.linalg.vector_norm(object_vel, dim=1)
-    
+
     # Check if velocity exceeds threshold
     dropped = velocity_magnitude > velocity_threshold
-    
+
     return dropped

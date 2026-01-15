@@ -95,6 +95,7 @@ class ActionsCfg:
     lift_action: mdp.ActionTermCfg = MISSING
     head_action: mdp.ActionTermCfg = MISSING
 
+
 @configclass
 class ObservationsCfg:
     """Observation specifications for the MDP."""

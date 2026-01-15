@@ -45,10 +45,11 @@ from robotis_lab.assets.object.screw_driver_ring import SCREW_DRIVER_RING_CFG
 from robotis_lab.assets.object.tooth_brush import TOOTH_BRUSH_CFG
 from robotis_lab.assets.object.background_cube import BACKGROUND_CUBE_CFG
 
+
 @configclass
 class EventCfg:
     """Configuration for reset events.
-    
+
     Events are organized in the following order:
     1. Robot state initialization
     2. Scene object placement (table + objects moving together)
@@ -126,6 +127,7 @@ class EventCfg:
             "asset_cfg": SceneEntityCfg("light"),
         },
     )
+
 
 @configclass
 class FFWSG2PickPlaceEnvCfg(PickPlaceEnvCfg):

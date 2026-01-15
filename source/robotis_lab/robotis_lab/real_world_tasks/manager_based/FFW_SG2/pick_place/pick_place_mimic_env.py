@@ -140,7 +140,7 @@ class FFWSG2PickPlaceMimicEnv(ManagerBasedRLMimicEnv):
 
     def action_to_target_eef_pose(self, action: torch.Tensor) -> dict[str, torch.Tensor]:
         eef_name = list(self.cfg.subtask_configs.keys())[0]
-        
+
         # For FFW-SG2, use right arm as primary manipulator
         # Action format from IK conversion: [left_eef(7), gripper_l(1), right_eef(7), gripper_r(1), lift(1), head(2)]
         # We return only the right arm EEF pose (indices 8-14)

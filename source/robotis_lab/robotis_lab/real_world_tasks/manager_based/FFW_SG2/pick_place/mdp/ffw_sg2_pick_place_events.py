@@ -27,7 +27,7 @@ import torch
 from typing import TYPE_CHECKING
 
 import isaaclab.utils.math as math_utils
-from isaaclab.assets import Articulation, AssetBase, RigidObject
+from isaaclab.assets import Articulation, AssetBase
 from isaaclab.sensors.camera import Camera
 from isaaclab.managers import SceneEntityCfg
 from typing import Literal
@@ -41,14 +41,15 @@ if TYPE_CHECKING:
 def create_joint_position_mapping(joint_names: list[str], desired_values: dict[str, float]) -> torch.Tensor:
     """Create a tensor with joint positions in the correct order based on joint names."""
     joint_positions = []
-    
+
     for joint_name in joint_names:
         if joint_name in desired_values:
             joint_positions.append(desired_values[joint_name])
         else:
             joint_positions.append(0.0)  # Default value
-    
+
     return torch.tensor(joint_positions, dtype=torch.float32)
+
 
 def set_default_joint_pose(
     env: ManagerBasedEnv,
@@ -58,18 +59,19 @@ def set_default_joint_pose(
 ):
     """Set the default joint positions for the robot using joint names."""
     asset: Articulation = env.scene[asset_cfg.name]
-    
+
     # Create properly ordered tensor from joint name mapping
     default_pose_tensor = create_joint_position_mapping(asset.joint_names, joint_positions)
     default_pose_tensor = default_pose_tensor.to(device=env.device)
-    
+
     # Ensure correct shape for multiple environments
     if default_pose_tensor.dim() == 1:
         default_pose_tensor = default_pose_tensor.unsqueeze(0).repeat(len(env_ids), 1)
-    
+
     # Set joint positions
     asset.set_joint_position_target(default_pose_tensor, env_ids=env_ids)
     asset.write_joint_state_to_sim(default_pose_tensor, torch.zeros_like(default_pose_tensor), env_ids=env_ids)
+
 
 def randomize_joint_by_gaussian_offset(
     env: ManagerBasedEnv,
@@ -84,14 +86,14 @@ def randomize_joint_by_gaussian_offset(
     # Use current joint positions instead of default positions
     joint_pos = asset.data.joint_pos[env_ids].clone()
     joint_vel = asset.data.joint_vel[env_ids].clone()
-    
+
     # If joint_names is specified, only randomize those joints
     if joint_names is not None:
         for joint_name in joint_names:
             if joint_name in asset.joint_names:
                 joint_idx = asset.joint_names.index(joint_name)
                 noise = math_utils.sample_gaussian(mean, std, (len(env_ids), 1), joint_pos.device)
-                joint_pos[:, joint_idx:joint_idx+1] += noise
+                joint_pos[:, joint_idx:joint_idx + 1] += noise
     else:
         # Original behavior - randomize all joints
         joint_pos += math_utils.sample_gaussian(mean, std, joint_pos.shape, joint_pos.device)
@@ -250,6 +252,7 @@ def randomize_camera_pose(
             pos.unsqueeze(0), ori.unsqueeze(0), env_ids=torch.tensor([env_id], device=asset.device), convention=convention
         )
 
+
 def randomize_robot_base_pose(
     env: ManagerBasedEnv,
     env_ids: torch.Tensor,
@@ -285,6 +288,7 @@ def randomize_robot_base_pose(
             torch.zeros(1, 6, device=env.device), 
             env_ids=torch.tensor([cur_env], device=env.device)
         )
+
 
 def set_object_pose(
     env: ManagerBasedEnv,
@@ -356,7 +360,7 @@ def randomize_table_with_objects(
     table_pose_range: dict[str, tuple[float, float]],
 ):
     """Randomize table pose and move all objects together maintaining relative positions.
-    
+
     Essential for trajectory augmentation - EE-Object relative trajectory remains valid
     when objects move together with the table.
     """
@@ -369,7 +373,7 @@ def randomize_table_with_objects(
         # 1. Sample random table pose
         range_list = [table_pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
         table_sample = [random.uniform(r[0], r[1]) for r in range_list]
-        
+
         # Table position and orientation in world frame
         table_pos = torch.tensor([table_sample[0:3]], device=env.device) + env.scene.env_origins[cur_env, 0:3]
         table_quat = math_utils.quat_from_euler_xyz(
@@ -377,7 +381,7 @@ def randomize_table_with_objects(
             torch.tensor([table_sample[4]], device=env.device),
             torch.tensor([table_sample[5]], device=env.device)
         )
-        
+
         # 2. Write table pose
         table_asset.write_root_pose_to_sim(
             torch.cat([table_pos, table_quat], dim=-1),
@@ -387,11 +391,11 @@ def randomize_table_with_objects(
             torch.zeros(1, 6, device=env.device),
             env_ids=torch.tensor([cur_env], device=env.device)
         )
-        
+
         # 3. Move all objects relative to table
         for obj_cfg, rel_pose in zip(object_cfgs, object_relative_poses):
             obj_asset = env.scene[obj_cfg.name]
-            
+
             # Get relative position and orientation
             rel_pos = torch.tensor([[
                 rel_pose.get("x", 0.0),
@@ -403,15 +407,15 @@ def randomize_table_with_objects(
                 torch.tensor([rel_pose.get("pitch", 0.0)], device=env.device),
                 torch.tensor([rel_pose.get("yaw", 0.0)], device=env.device)
             )
-            
+
             # Transform relative pose to world frame using table pose
             # obj_pos_world = table_pos + rotate(rel_pos, table_quat)
             rotated_rel_pos = math_utils.quat_apply(table_quat, rel_pos)
             obj_pos_world = table_pos + rotated_rel_pos
-            
+
             # obj_quat_world = table_quat * rel_quat
             obj_quat_world = math_utils.quat_mul(table_quat, rel_quat)
-            
+
             # Write object pose
             obj_asset.write_root_pose_to_sim(
                 torch.cat([obj_pos_world, obj_quat_world], dim=-1),
@@ -435,13 +439,13 @@ def randomize_table_with_objects_on_slots(
     table_pose_range: dict[str, tuple[float, float]] = None,
 ):
     """Randomize table pose and place objects on slots, all moving together.
-    
+
     This maintains relative positions between objects for proper trajectory augmentation.
     The target object is placed on a random slot on target_side, other objects on remaining slots.
     """
     if env_ids is None:
         return
-    
+
     if table_pose_range is None:
         table_pose_range = {
             "x": (0.0, 0.0), "y": (0.0, 0.0), "z": (0.0, 0.0),
@@ -450,7 +454,7 @@ def randomize_table_with_objects_on_slots(
 
     table_asset = env.scene[table_cfg.name]
     basket_asset = env.scene[basket_cfg.name]
-    
+
     # Determine which slots to use for target
     if target_side == "left":
         target_slots = LEFT_SLOTS.copy()
@@ -461,7 +465,7 @@ def randomize_table_with_objects_on_slots(
         # 1. Sample random table pose
         range_list = [table_pose_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
         table_sample = [random.uniform(r[0], r[1]) for r in range_list]
-        
+
         # Table position and orientation
         table_pos = torch.tensor([table_sample[0:3]], device=env.device) + env.scene.env_origins[cur_env, 0:3]
         table_quat = math_utils.quat_from_euler_xyz(
@@ -469,7 +473,7 @@ def randomize_table_with_objects_on_slots(
             torch.tensor([table_sample[4]], device=env.device),
             torch.tensor([table_sample[5]], device=env.device)
         )
-        
+
         # 2. Write table pose
         table_asset.write_root_pose_to_sim(
             torch.cat([table_pos, table_quat], dim=-1),
@@ -479,7 +483,7 @@ def randomize_table_with_objects_on_slots(
             torch.zeros(1, 6, device=env.device),
             env_ids=torch.tensor([cur_env], device=env.device)
         )
-        
+
         # 3. Place basket relative to table
         basket_rel_pos = torch.tensor([[
             basket_relative_pose.get("x", 0.41),
@@ -491,11 +495,11 @@ def randomize_table_with_objects_on_slots(
             torch.tensor([basket_relative_pose.get("pitch", 0.0)], device=env.device),
             torch.tensor([basket_relative_pose.get("yaw", 0.0)], device=env.device)
         )
-        
+
         rotated_basket_pos = math_utils.quat_apply(table_quat, basket_rel_pos)
         basket_pos_world = table_pos + rotated_basket_pos
         basket_quat_world = math_utils.quat_mul(table_quat, basket_rel_quat)
-        
+
         basket_asset.write_root_pose_to_sim(
             torch.cat([basket_pos_world, basket_quat_world], dim=-1),
             env_ids=torch.tensor([cur_env], device=env.device)
@@ -504,22 +508,22 @@ def randomize_table_with_objects_on_slots(
             torch.zeros(1, 6, device=env.device),
             env_ids=torch.tensor([cur_env], device=env.device)
         )
-        
+
         # 4. Place objects on slots (relative to table)
         available_target_slots = target_slots.copy()
         available_all_slots = ALL_SLOTS.copy()
-        
+
         # Place target object
         target_asset = env.scene[target_asset_cfg.name]
         target_slot = random.choice(available_target_slots)
         available_all_slots.remove(target_slot)
-        
+
         # Transform slot position by table pose
         slot_rel_pos = torch.tensor([[target_slot[0], target_slot[1], target_slot[2]]], device=env.device)
         rotated_slot_pos = math_utils.quat_apply(table_quat, slot_rel_pos)
         target_pos_world = table_pos + rotated_slot_pos
         target_quat_world = table_quat.clone()  # Same orientation as table
-        
+
         target_asset.write_root_pose_to_sim(
             torch.cat([target_pos_world, target_quat_world], dim=-1),
             env_ids=torch.tensor([cur_env], device=env.device)
@@ -528,22 +532,22 @@ def randomize_table_with_objects_on_slots(
             torch.zeros(1, 6, device=env.device),
             env_ids=torch.tensor([cur_env], device=env.device)
         )
-        
+
         # Place other objects
         random.shuffle(available_all_slots)
         for i, asset_cfg in enumerate(other_asset_cfgs):
             if i >= len(available_all_slots):
                 break
-            
+
             asset = env.scene[asset_cfg.name]
             slot = available_all_slots[i]
-            
+
             # Transform slot position by table pose
             slot_rel_pos = torch.tensor([[slot[0], slot[1], slot[2]]], device=env.device)
             rotated_slot_pos = math_utils.quat_apply(table_quat, slot_rel_pos)
             obj_pos_world = table_pos + rotated_slot_pos
             obj_quat_world = table_quat.clone()
-            
+
             asset.write_root_pose_to_sim(
                 torch.cat([obj_pos_world, obj_quat_world], dim=-1),
                 env_ids=torch.tensor([cur_env], device=env.device)
@@ -566,22 +570,22 @@ def randomize_background_color(
 
     import omni.usd
     stage = omni.usd.get_context().get_stage()
-    
+
     for cur_env in env_ids.tolist():
         # Construct prim path for this environment
         prim_path = f"/World/envs/env_{cur_env}/BackgroundCube"
         prim = stage.GetPrimAtPath(prim_path)
-        
+
         if not prim.IsValid():
             continue
-        
+
         # Generate random color
         new_color = Gf.Vec3f(
             random.uniform(color_range[0][0], color_range[0][1]),
             random.uniform(color_range[1][0], color_range[1][1]),
             random.uniform(color_range[2][0], color_range[2][1]),
         )
-        
+
         # Find and update material color
         _update_prim_material_color(stage, prim, new_color)
 
@@ -589,7 +593,7 @@ def randomize_background_color(
 def _update_prim_material_color(stage, prim, color: Gf.Vec3f) -> bool:
     """Helper to find and update material color on a prim."""
     prim_path = prim.GetPath().pathString
-    
+
     # Try common material paths
     for mat_suffix in ["/Looks/PreviewSurface", "/Looks/material_0", "/Material", "/Looks"]:
         mat_prim = stage.GetPrimAtPath(f"{prim_path}{mat_suffix}")
@@ -598,14 +602,14 @@ def _update_prim_material_color(stage, prim, color: Gf.Vec3f) -> bool:
             shader_prim = stage.GetPrimAtPath(f"{mat_prim.GetPath().pathString}/Shader")
             if not shader_prim.IsValid():
                 shader_prim = mat_prim
-            
+
             # Try different color attribute names
             for attr_name in ["inputs:diffuseColor", "inputs:diffuse_color_constant", "inputs:baseColor"]:
                 color_attr = shader_prim.GetAttribute(attr_name)
                 if color_attr.IsValid():
                     color_attr.Set(color)
                     return True
-    
+
     # Fallback: search geometry children for material bindings
     return _search_geometry_for_material(prim, color)
 
