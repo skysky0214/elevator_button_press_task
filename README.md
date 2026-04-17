@@ -1,335 +1,101 @@
-# robotis_lab
+# OMY Elevator Call-Button Press Task
 
-[![IsaacSim](https://img.shields.io/badge/IsaacSim-5.1.0-silver.svg)](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)
-[![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.3.0-silver)](https://isaac-sim.github.io/IsaacLab/main/index.html)
-[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://docs.python.org/3/whatsnew/3.11.html)
-[![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/22.04/)
-[![License](https://img.shields.io/badge/license-Apache2.0-yellow.svg)](https://opensource.org/license/apache-2-0)
-
-https://github.com/user-attachments/assets/28347b4b-f90c-4a4f-8916-621f917d86cb
+A visuomotor imitation learning task for ROBOTIS OMY 6-DOF arm pressing an
+elevator hall call button inside Isaac Sim, built on top of
+[ROBOTIS-GIT/robotis_lab](https://github.com/ROBOTIS-GIT/robotis_lab) +
+[Isaac Lab](https://github.com/isaac-sim/IsaacLab).
 
 ## Overview
 
-**robotis_lab** is a research-oriented repository based on [Isaac Lab](https://isaac-sim.github.io/IsaacLab), designed to enable reinforcement learning (RL) and imitation learning (IL) experiments using Robotis robots in simulation.
-This project provides simulation environments, configuration tools, and task definitions tailored for Robotis hardware, leveraging NVIDIA Isaac Sim’s powerful GPU-accelerated physics engine and Isaac Lab’s modular RL pipeline.
+- **Task**: OMY arm presses `CallBtn_0` on the outside panel of an elevator.
+- **Scene**: ground + dome light + procedurally-varied elevator USD (10 spread-sampled variants) + pedestal + OMY.
+- **Randomization (per reset)**:
+  - Elevator xyz within ±10 cm
+  - Robot standoff 0.4 – 0.8 m from button
+  - Robot lateral ±25 cm, yaw ±25°
+- **Scripted teacher (diffik)**: IKPy multi-seed + joint-space smoothstep + DLS micro-thrust.
+- **Visuomotor recording**: wrist cam + top cam RGB @ 240×320, joint state, actions, initial state, states.
+- **Trained policy**: BC-RNN-GMM with ResNet18 visual encoder (via robomimic).
 
-> [!IMPORTANT]
-> This repository currently depends on **IsaacLab v2.2.0** or higher.
->
-
-## Installation (Docker)
-
-Docker installation provides a consistent environment with all dependencies pre-installed.
-
-**Prerequisites:**
-- Docker and Docker Compose installed
-- NVIDIA Container Toolkit installed
-- NVIDIA GPU with appropriate drivers
-
-**Steps:**
-
-1. Clone robotis_lab repository with submodules:
-
-   ```bash
-   git clone --recurse-submodules https://github.com/ROBOTIS-GIT/robotis_lab.git
-   cd robotis_lab
-   ```
-
-   If you already cloned without submodules, initialize them:
-   ```bash
-   git submodule update --init --recursive
-   ```
-
-2. Build and start the Docker container:
-
-   ```bash
-   ./docker/container.sh start
-   ```
-
-3. Enter the container:
-
-   ```bash
-   ./docker/container.sh enter
-   ```
-
-**Docker Commands:**
-- `./docker/container.sh start` - Build and start the container
-- `./docker/container.sh enter` - Enter the running container
-- `./docker/container.sh stop` - Stop the container
-- `./docker/container.sh logs` - View container logs
-- `./docker/container.sh clean` - Remove container and image
-
-**What's included in the Docker image:**
-- Isaac Sim 5.1.0
-- Isaac Lab v2.3.0 (from third_party submodule)
-- CycloneDDS 0.10.2 (from third_party submodule)
-- robotis_dds_python (from third_party submodule)
-- LeRobot 0.3.3 (in separate virtual environment at `~/lerobot_env`)
-- All required dependencies and configurations
-
-## Try examples
-
-### Sim2Sim
-<details>
-<summary>Reinforcement learning</summary>
-
-**OMY Reach Task**
-
-```bash
-# Train
-python scripts/reinforcement_learning/rsl_rl/train.py --task RobotisLab-Reach-OMY-v0 --num_envs=512 --headless
-
-# Play
-python scripts/reinforcement_learning/rsl_rl/play.py --task RobotisLab-Reach-OMY-v0 --num_envs=16
-```
-
-**OMY Lift Task**
-
-```bash
-# Train
-python scripts/reinforcement_learning/rsl_rl/train.py --task RobotisLab-Lift-Cube-OMY-v0 --num_envs=512 --headless
-
-# Play
-python scripts/reinforcement_learning/rsl_rl/play.py --task RobotisLab-Lift-Cube-OMY-v0 --num_envs=16
-```
-
-**OMY Open drawer Task**
-
-```bash
-# Train
-python scripts/reinforcement_learning/rsl_rl/train.py --task RobotisLab-Open-Drawer-OMY-v0 --num_envs=512 --headless
-
-# Play
-python scripts/reinforcement_learning/rsl_rl/play.py --task RobotisLab-Open-Drawer-OMY-v0 --num_envs=16
-```
-
-**FFW-BG2 reach Task**
-
-```bash
-# Train
-python scripts/reinforcement_learning/rsl_rl/train.py --task RobotisLab-Reach-FFW-BG2-v0 --num_envs=512 --headless
-
-# Play
-python scripts/reinforcement_learning/rsl_rl/play.py --task RobotisLab-Reach-FFW-BG2-v0 --num_envs=16
-```
-
-</details>
-
-<details>
-<summary>Imitation learning</summary>
-
->
-> If you want to control a **SINGLE ROBOT** with the keyboard during playback, add `--keyboard` at the end of the play script.
->
-> ```
-> Key bindings:
-> =========================== =========================
-> Command                     Key
-> =========================== =========================
-> Toggle gripper (open/close) K      
-> Move arm along x-axis       W / S   
-> Move arm along y-axis       A / D
-> Move arm along z-axis       Q / E
-> Rotate arm along x-axis     Z / X
-> Rotate arm along y-axis     T / G
-> Rotate arm along z-axis     C / V
-> =========================== =========================
-> ```
-
-**OMY Stack Task** (Stack the blocks in the following order: blue → red → green.)
-
-```bash
-# Teleop and record
-python scripts/imitation_learning/isaaclab_recorder/record_demos.py --task RobotisLab-Stack-Cube-OMY-IK-Rel-v0 --teleop_device keyboard --dataset_file ./datasets/dataset.hdf5 --num_demos 10
-
-# Annotate
-python scripts/imitation_learning/isaaclab_mimic/annotate_demos.py --device cuda --task RobotisLab-Stack-Cube-OMY-IK-Rel-Mimic-v0 --auto --input_file ./datasets/dataset.hdf5 --output_file ./datasets/annotated_dataset.hdf5 --headless
-
-# Mimic data
-python scripts/imitation_learning/isaaclab_mimic/generate_dataset.py \
---device cuda --num_envs 100 --generation_num_trials 1000 \
---input_file ./datasets/annotated_dataset.hdf5 --output_file ./datasets/generated_dataset.hdf5 --headless
-
-# Train
-python scripts/imitation_learning/robomimic/train.py \
---task RobotisLab-Stack-Cube-OMY-IK-Rel-v0 --algo bc \
---dataset ./datasets/generated_dataset.hdf5
-
-# Play
-python scripts/imitation_learning/robomimic/play.py \
---device cuda --task RobotisLab-Stack-Cube-OMY-IK-Rel-v0 --num_rollouts 50 \
---checkpoint /PATH/TO/desired_model_checkpoint.pth
-```
-
-**FFW-BG2 Pick and Place Task** (Move the red stick into the basket.)
-
-```bash
-# Teleop and record
-python scripts/imitation_learning/isaaclab_recorder/record_demos.py --task RobotisLab-PickPlace-FFW-BG2-IK-Rel-v0 --teleop_device keyboard --dataset_file ./datasets/dataset.hdf5 --num_demos 10 --enable_cameras
-
-# Annotate
-python scripts/imitation_learning/isaaclab_mimic/annotate_demos.py --device cuda --task RobotisLab-PickPlace-FFW-BG2-Mimic-v0 --input_file ./datasets/dataset.hdf5 --output_file ./datasets/annotated_dataset.hdf5 --enable_cameras
-
-# Mimic data
-python scripts/imitation_learning/isaaclab_mimic/generate_dataset.py \
---device cuda --num_envs 20 --generation_num_trials 300 \
---input_file ./datasets/annotated_dataset.hdf5 --output_file ./datasets/generated_dataset.hdf5 --enable_cameras --headless
-
-# Train
-python scripts/imitation_learning/robomimic/train.py \
---task RobotisLab-PickPlace-FFW-BG2-IK-Rel-v0 --algo bc \
---dataset ./datasets/generated_dataset.hdf5
-
-# Play
-python scripts/imitation_learning/robomimic/play.py \
---device cuda --task RobotisLab-PickPlace-FFW-BG2-IK-Rel-v0  --num_rollouts 50 \
---checkpoint /PATH/TO/desired_model_checkpoint.pth --enable_cameras
-```
-</details>
-
-### Sim2Real
->
-> **Important**
->
-> OMY Hardware Setup:
-> To run Sim2Real with the real OMY robot, you need to bring up the robot.
->
-> This can be done using ROBOTIS’s [open_manipulator repository](https://github.com/ROBOTIS-GIT/open_manipulator.git).
-> 
-> AI WORKER Hardware Setup:
-> To run Sim2Real with the real AI WORKER robot, you need to bring up the robot.
->
-> This can be done using ROBOTIS’s [ai_worker repository](https://github.com/ROBOTIS-GIT/ai_worker.git).
->
-> The training and inference of the collected dataset should be carried out using physical_ai_tools.
-> This can be done using ROBOTIS’s [physical_ai_tools](https://github.com/ROBOTIS-GIT/physical_ai_tools)
->
-
-<details>
-<summary>Reinforcement learning</summary>
-
-**OMY Reach Task**
-[Introduction YouTube](https://www.youtube.com/watch?v=pSY0Gb5b5kI)
-
-https://github.com/user-attachments/assets/6c27bdb1-3a6b-4686-a546-8f14f01e4abe
-
-Run Sim2Real Reach Policy on OMY
-
-```bash
-# Train
-python scripts/reinforcement_learning/rsl_rl/train.py --task RobotisLab-Reach-OMY-v0 --num_envs=512 --headless
-
-# Play (You must run rsl_rl play in order to generate the policy file.)
-python scripts/reinforcement_learning/rsl_rl/play.py --task RobotisLab-Reach-OMY-v0 --num_envs=16
-
-# Sim2Real
-python scripts/sim2real/reinforcement_learning/inference/OMY/reach/run_omy_reach.py --model_dir=<2025-07-10_08-47-09>
-```
-
-Replace <2025-07-10_08-47-09> with the actual timestamp folder name under:
-```bash
-logs/rsl_rl/reach_omy/
-```
-</details>
-
-<details>
-<summary>Imitation learning</summary>
-
-**OMY Pick and Place Task**
-
-**Sim2Sim**
-
-https://github.com/user-attachments/assets/a6e75e80-203f-47d1-974b-d4c5435c15bc
-
-**Sim2Real**
-
-https://github.com/user-attachments/assets/8ec9d245-f8e0-4bcc-b683-0ea2864de495
-
-
-* Teleop and record demos
-```bash
-python scripts/sim2real/imitation_learning/recorder/record_demos.py --task=RobotisLab-Real-Pick-Place-Bottle-OMY-v0 --robot_type OMY --dataset_file ./datasets/omy_pick_place_task.hdf5 --num_demos 10 --enable_cameras
+## Repo layout
 
 ```
-
-* Mimic generate dataset
-
-```bash
-# Data convert ee_pose action from joint action
-python scripts/sim2real/imitation_learning/mimic/action_data_converter.py --robot_type OMY --input_file ./datasets/omy_pick_place_task.hdf5 --output_file ./datasets/processed_omy_pick_place_task.hdf5 --action_type ik
-
-# Annotate dataset
-python scripts/sim2real/imitation_learning/mimic/annotate_demos.py --task RobotisLab-Real-Mimic-Pick-Place-Bottle-OMY-v0 --auto --input_file ./datasets/processed_omy_pick_place_task.hdf5 --output_file ./datasets/annotated_dataset.hdf5 --enable_cameras --headless
-
-# Generate dataset
-python scripts/sim2real/imitation_learning/mimic/generate_dataset.py --device cuda --num_envs 10 --task RobotisLab-Real-Mimic-Pick-Place-Bottle-OMY-v0 --generation_num_trials 500 --input_file ./datasets/annotated_dataset.hdf5 --output_file ./datasets/generated_dataset.hdf5 --enable_cameras --headless
-
-# Data convert joint action from ee_pose action
-python scripts/sim2real/imitation_learning/mimic/action_data_converter.py --robot_type OMY --input_file ./datasets/generated_dataset.hdf5 --output_file ./datasets/processed_generated_dataset.hdf5 --action_type joint
-
+elevator_button_press_task/
+├── task/                          # Isaac Lab env registration for the task
+│   ├── __init__.py                # gym.register — joint_pos / IK-Rel / IK-Rel-Mimic variants
+│   ├── elevator_call_env_cfg.py   # Scene + Obs + Events + Terminations (base)
+│   ├── joint_pos_env_cfg.py       # Concrete env with OMY + joint position action + cameras
+│   ├── ik_rel_env_cfg.py          # IK-Rel action variant (needed for Mimic)
+│   ├── mimic_env.py               # Mimic hooks (EEF pose, subtask signals, object poses)
+│   ├── mimic_env_cfg.py           # Mimic config (subtask, datagen)
+│   ├── mdp/observations.py        # Custom obs: call_button_pos, EEF pose, joint_pos_target, …
+│   ├── mdp/events.py              # Robot dynamic placement at hall side of button, elevator randomization
+│   └── agents/robomimic/bc_rnn_image.json  # BC-RNN-GMM visuomotor config
+├── scripts/
+│   ├── diffik_teacher_jointpos.py # Scripted teacher (diffik-style) — drives joint_pos env
+│   ├── diffik_teacher_mimic.py    # Same algorithm, IK-Rel action output (for Mimic)
+│   ├── cam_edit_static.py         # GUI helper for tuning cam_wrist / cam_top offset
+│   ├── convert_to_ik_rel.py       # Offline joint_pos HDF5 → IK-Rel HDF5 (for Mimic)
+│   ├── merge_v2.py                # External-link HDF5 merge (tiny metadata file)
+│   ├── collect_10_cam.sh          # Batch: record 10 demos with cameras on 10 different USDs
+│   ├── run_mimic_pipeline.sh      # Convert → annotate → generate augmented dataset
+│   └── verify_demo.sh             # Dump HDF5 structure + sample frames for inspection
+└── docs/
+    └── setup.md                   # How to drop the task into a robotis_lab install
 ```
 
-* Data convert lerobot dataset from IsaacLab hdf dataset
-```bash
-lerobot-python scripts/sim2real/imitation_learning/data_converter/isaaclab2lerobot.py \
-    --task=RobotisLab-Real-Pick-Place-Bottle-OMY-v0 \
-    --robot_type OMY \
-    --dataset_file ./datasets/processed_generated_dataset.hdf5
+## Installation
 
+See [docs/setup.md](docs/setup.md).
+
+## Usage
+
+### 1. Record 10 visuomotor demos
+
+```bash
+bash scripts/collect_10_cam.sh
+# → /isaac-sim/output/callbutton_demos_cam/demo_0X_usdYYY.hdf5
 ```
 
-* Inference in simulation
-```bash
-python scripts/sim2real/imitation_learning/inference/inference_demos.py --task RobotisLab-Real-Pick-Place-Bottle-OMY-v0 --robot_type OMY --enable_cameras
+### 2. Merge via external-link
 
+```bash
+/isaac-sim/python.sh scripts/merge_v2.py
 ```
 
-**FFW SG2 Pick and Place Task**
+### 3. Train BC-RNN (robomimic)
 
-https://github.com/user-attachments/assets/cdb3afca-f0db-4fb6-bf17-e361f3aa254b
-
-* Teleop and record demos
 ```bash
-python scripts/sim2real/imitation_learning/recorder/record_demos.py --task=RobotisLab-Real-Pick-Place-FFW-SG2-v0 --robot_type FFW_SG2 --dataset_file ./datasets/ffw_sg2_raw.hdf5 --num_demos 4 --enable_cameras
-
+/isaac-sim/python.sh scripts/imitation_learning/robomimic/train.py \
+  --task RobotisLab-CallButton-Right-OMY-v0 \
+  --algo bc \
+  --dataset /isaac-sim/output/callbutton_demos_cam/merged.hdf5 \
+  --log_dir callbutton_bc
 ```
 
-* Mimic generate dataset
+### 4. (Optional) Mimic augmentation pipeline
+
 ```bash
-
-# Data convert ee_pose action from joint action
-python scripts/sim2real/imitation_learning/mimic/action_data_converter.py --robot_type FFW_SG2 --input_file ./datasets/ffw_sg2_raw.hdf5 --output_file ./datasets/ffw_sg2_ik.hdf5 --action_type ik
-
-# Annotate dataset
-python scripts/sim2real/imitation_learning/mimic/annotate_demos.py --task RobotisLab-Real-Mimic-Pick-Place-FFW-SG2-v0 --auto --input_file ./datasets/ffw_sg2_ik.hdf5 --output_file ./datasets/ffw_sg2_annotate.hdf5 --enable_cameras --headless
-
-# Generate dataset
-python scripts/sim2real/imitation_learning/mimic/generate_dataset.py --device cuda --num_envs 10 --task RobotisLab-Real-Mimic-Pick-Place-FFW-SG2-v0 --generation_num_trials 500 --input_file ./datasets/ffw_sg2_annotate.hdf5 --output_file ./datasets/ffw_sg2_generate.hdf5 --enable_cameras --headless
-
-# Data convert joint action from ee_pose action
-python scripts/sim2real/imitation_learning/mimic/action_data_converter.py --robot_type FFW_SG2 --input_file ./datasets/ffw_sg2_generate.hdf5 --output_file ./datasets/ffw_sg2_final.hdf5 --action_type joint
-
+bash scripts/run_mimic_pipeline.sh
 ```
 
-* Data convert lerobot dataset from IsaacLab hdf dataset
-```bash
-lerobot-python scripts/sim2real/imitation_learning/data_converter/isaaclab2lerobot.py \
-    --task=RobotisLab-Real-Pick-Place-FFW-SG2-v0 \
-    --robot_type FFW_SG2 \
-    --dataset_file ./datasets/ffw_sg2_final.hdf5
+## Attribution / license
 
-```
+This repository is licensed under **Apache 2.0** (see [LICENSE](LICENSE)).
 
-* Inference in simulation
-```bash
-python scripts/sim2real/imitation_learning/inference/inference_demos.py --task RobotisLab-Real-Pick-Place-FFW-SG2-v0  --robot_type FFW_SG2 --enable_cameras
+Derived from the task template structure of
+[ROBOTIS-GIT/robotis_lab](https://github.com/ROBOTIS-GIT/robotis_lab)
+(Apache 2.0). The OMY robot asset, elevator USDs, and the IL pipeline scripts
+(`record_demos.py`, `annotate_demos.py`, `generate_dataset.py`,
+`action_data_converter.py`, etc.) are part of `robotis_lab` and are NOT
+included in this repo — this repo only contains the new task code and
+utilities written on top of them.
 
-```
+The diffik teacher algorithm (`scripts/diffik_teacher_*.py`) is ported from
+`isaac_sim_demo/example/omy_f3m_press_diffik.py` (internal tooling).
 
-## License
+## Acknowledgments
 
-This repository is licensed under the **Apache 2.0 License**. See [LICENSE](LICENSE) for details.
-
-### Third-party components
-
-- **Isaac Lab**: BSD-3-Clause License, see [LICENSE-IsaacLab](LICENSE-IsaacLab)
+- **Team lead**: 김혜종 (Hyejong Kim)
+- **Co-worker**: 정성훈 (Hun Jung)
+- Built during internship at ROBOTIS.
