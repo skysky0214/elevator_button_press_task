@@ -1,6 +1,3 @@
-# Copyright 2026 Hwang Yeeun
-# SPDX-License-Identifier: Apache-2.0
-
 from __future__ import annotations
 
 import torch
@@ -88,3 +85,43 @@ def call_button_pressed(
     pos_w, _ = _read_button_pose_world(env)
     diff = pos_w - ee_tf_data.target_pos_w[..., 0, :]
     return torch.linalg.vector_norm(diff, dim=-1) < distance_threshold
+
+
+def call_button_depression(env: "ManagerBasedRLEnv") -> torch.Tensor:
+    """Depression magnitude of CallBtn_0 from its rest position (m)."""
+    pos_w, _ = _read_button_pose_world(env)  # (num_envs, 3)
+    if not hasattr(env, "button_rest_pos_w"):
+        return torch.zeros((env.num_envs, 1), device=env.device)
+    diff = pos_w - env.button_rest_pos_w
+    return torch.linalg.vector_norm(diff, dim=-1, keepdim=True)
+
+
+def call_button_pressed_physically(
+    env: "ManagerBasedRLEnv",
+    press_threshold: float = 0.005,
+) -> torch.Tensor:
+    """Success: CallBtn_0 depressed by at least press_threshold meters."""
+    pos_w, _ = _read_button_pose_world(env)
+    if not hasattr(env, "button_rest_pos_w"):
+        return torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+    diff = pos_w - env.button_rest_pos_w
+    return torch.linalg.vector_norm(diff, dim=-1) > press_threshold
+
+
+def call_button_contact_force(env: "ManagerBasedRLEnv") -> torch.Tensor:
+    """Contact force magnitude between fingertip (rh_p12_rn_r2) and CallBtn_0."""
+    sensor = env.scene["btn_contact"]
+    # force_matrix_w: (num_envs, num_bodies=1, num_filter_prims=1, 3)
+    f = sensor.data.force_matrix_w[:, 0, 0]  # (num_envs, 3)
+    return torch.linalg.vector_norm(f, dim=-1, keepdim=True)
+
+
+def call_button_contact_detected(
+    env: "ManagerBasedRLEnv",
+    force_threshold: float = 0.5,
+) -> torch.Tensor:
+    """Success when fingertip-button contact force exceeds threshold (N)."""
+    sensor = env.scene["btn_contact"]
+    f = sensor.data.force_matrix_w[:, 0, 0]
+    mag = torch.linalg.vector_norm(f, dim=-1)
+    return mag > force_threshold

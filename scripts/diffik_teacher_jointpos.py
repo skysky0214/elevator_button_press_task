@@ -254,7 +254,7 @@ def _did_terminate(terminated, truncated):
 # -----------------------------------------------------------------------------
 settle_action = _make_action(home_arm, gripper=1.0)
 print("[PHASE] settle")
-for i in range(30):
+for i in range(0):  # settle removed
     obs, rew, term, trunc, info = env.step(settle_action)
     # First 20 steps: teleport gripper joints back to closed every tick.
     _enforce_gripper_closed(teleport=(i < 20))
@@ -297,8 +297,8 @@ if not terminated_early:
     tip_frame_idx = robot.find_bodies(TIP_LINK)[0][0]
     tip_jacobi_idx = tip_frame_idx - 1
 
-    PUSH_STEP_M = 0.0006
-    JOINT_CLAMP_RAD = 0.005
+    PUSH_STEP_M = 0.003
+    JOINT_CLAMP_RAD = 0.025
     DLS_LAMBDA = 0.05
 
     def damped_pinv_torch(J, lam):
@@ -309,6 +309,7 @@ if not terminated_early:
     button_w_t = torch.tensor([button_w], dtype=torch.float32, device=device)
     current_targets = robot.data.joint_pos[:, arm_ids].clone()
     stall = 0
+
 
     for i in range(args.press_steps):
         tip_w_tensor = robot.data.body_pos_w[:, tip_frame_idx]

@@ -1,6 +1,3 @@
-# Copyright 2026 Hwang Yeeun
-# SPDX-License-Identifier: Apache-2.0
-
 # IK-relative action variant. Required for the Mimic pipeline.
 
 from isaaclab.controllers.differential_ik_cfg import DifferentialIKControllerCfg

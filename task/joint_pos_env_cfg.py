@@ -1,6 +1,3 @@
-# Copyright 2026 Hwang Yeeun
-# SPDX-License-Identifier: Apache-2.0
-
 # Joint-position control variant. OMY joints are driven directly.
 
 import isaaclab.sim as sim_utils

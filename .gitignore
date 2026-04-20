@@ -14,11 +14,14 @@ __pycache__/
 *.ckpt
 *.tar
 *.zip
+!checkpoints/*.pth
+!checkpoints/*.txt
 
 # Logs
 *.log
 logs/
 runs/
+!checkpoints/*.log
 
 # IDE / OS
 .vscode/

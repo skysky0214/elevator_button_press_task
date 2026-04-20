@@ -1,6 +1,3 @@
-# Copyright 2026 Hwang Yeeun
-# SPDX-License-Identifier: Apache-2.0
-
 """Custom events for the elevator call-button task.
 
 randomize_elevator_pose : shift elevator USD in xyz per env at reset. Button
@@ -239,3 +236,66 @@ def reset_robot_at_hall_side_of_button(
             pedestal.write_root_pose_to_sim(
                 ped_pose_tensor, env_ids=torch.tensor(ped_env_ids, device=device)
             )
+
+
+def randomize_init_joints(
+    env: "ManagerBasedRLEnv",
+    env_ids: torch.Tensor,
+    joint1_range_rad: tuple[float, float] = (-1.0, 1.0),
+    joint2_range_rad: tuple[float, float] = (-0.5, 0.3),
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+):
+    """Perturb initial arm joint_pos at reset to broaden demo coverage.
+
+    joint1 (base yaw) offset up to ~±60° so the arm can start facing any
+    direction, and joint2 (shoulder pitch) offset so arm can start folded
+    differently. Remaining joints stay at OMY default HOME pose.
+    """
+    robot: Articulation = env.scene[asset_cfg.name]
+    ids_list = env_ids.tolist() if hasattr(env_ids, "tolist") else list(env_ids)
+    if not ids_list:
+        return
+    device = env.device
+    env_ids_t = torch.tensor(ids_list, device=device)
+
+    # Clone current joint_pos / joint_vel for selected envs
+    jpos = robot.data.default_joint_pos[env_ids_t].clone()
+    jvel = robot.data.default_joint_vel[env_ids_t].clone()
+
+    j1_ids = robot.find_joints(["joint1"])[0]
+    j2_ids = robot.find_joints(["joint2"])[0]
+
+    for i, _ in enumerate(ids_list):
+        d1 = float(np.random.uniform(joint1_range_rad[0], joint1_range_rad[1]))
+        d2 = float(np.random.uniform(joint2_range_rad[0], joint2_range_rad[1]))
+        jpos[i, j1_ids[0]] += d1
+        jpos[i, j2_ids[0]] += d2
+
+    robot.write_joint_state_to_sim(jpos, jvel, env_ids=env_ids_t)
+
+
+def cache_button_rest_pos(
+    env: "ManagerBasedRLEnv",
+    env_ids: torch.Tensor,
+):
+    """Cache CallBtn_0 rest world position per env at reset. Runs AFTER
+    randomize_elevator_pose so it reflects the shifted elevator. Used by
+    call_button_depression observation and success termination."""
+    import omni.usd
+    from pxr import UsdGeom
+
+    stage = omni.usd.get_context().get_stage()
+    ids = env_ids.tolist() if hasattr(env_ids, "tolist") else list(env_ids)
+    if not hasattr(env, "button_rest_pos_w"):
+        env.button_rest_pos_w = torch.zeros((env.num_envs, 3), device=env.device)
+
+    for env_id in ids:
+        btn_prim = stage.GetPrimAtPath(
+            f"/World/envs/env_{env_id}/Elevator/Elevator/HallExterior/CallBtn_0"
+        )
+        if not btn_prim.IsValid():
+            continue
+        t = UsdGeom.Xformable(btn_prim).ComputeLocalToWorldTransform(0).ExtractTranslation()
+        env.button_rest_pos_w[env_id, 0] = float(t[0])
+        env.button_rest_pos_w[env_id, 1] = float(t[1])
+        env.button_rest_pos_w[env_id, 2] = float(t[2])

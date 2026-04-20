@@ -1,6 +1,3 @@
-# Copyright 2026 Hwang Yeeun
-# SPDX-License-Identifier: Apache-2.0
-
 # OMY elevator hall call-button press environment (base config).
 # Scene layout mirrors isaac_sim_demo/example/omy_f3m_press_diffik.py:
 #   ground + dome light + elevator USD (MultiAsset over 10 right-side variants)
@@ -185,8 +182,8 @@ class EventCfg:
         func=mdp.reset_robot_at_hall_side_of_button,
         mode="reset",
         params={
-            "standoff_range": (0.4, 0.8),
-            "lateral_range": (-0.25, 0.25),
+            "standoff_range": (0.25, 0.6),
+            "lateral_range": (-0.3, 0.3),
             "yaw_offset_range_deg": (-25.0, 25.0),
             "pedestal_height": PEDESTAL_HEIGHT,
         },

@@ -1,6 +1,3 @@
-# Copyright 2026 Hwang Yeeun
-# SPDX-License-Identifier: Apache-2.0
-
 # Mimic environment wrapper for OMY elevator call-button press (IK-Rel).
 # Mirrors the drawer Mimic env.
 
