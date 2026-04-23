@@ -26,3 +26,4 @@ from .cabinet import *  # noqa
 from .lift import *  # noqa
 from .reach import *  # noqa
 from .stack import *  # noqa
+from .elevator_call import *  # noqa
