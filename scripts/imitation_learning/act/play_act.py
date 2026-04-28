@@ -86,7 +86,15 @@ def build_policy(device):
     }
     policy = ACTPolicy(policy_config)
     sd = torch.load(args_cli.ckpt, map_location=device)
-    policy.load_state_dict(sd)
+    # strict=False so checkpoints from before the per-camera aux_uv_heads
+    # were introduced still load. Any missing keys (e.g. aux MLPs) get
+    # random-initialised; that is harmless for action inference because
+    # aux heads are off the action output path.
+    missing, unexpected = policy.load_state_dict(sd, strict=False)
+    if missing:
+        print(f"[INFO] missing keys (random-init): {missing[:5]}{' ...' if len(missing) > 5 else ''}")
+    if unexpected:
+        print(f"[INFO] unexpected keys: {unexpected[:5]}{' ...' if len(unexpected) > 5 else ''}")
     policy.to(device).eval()
     return policy
 
