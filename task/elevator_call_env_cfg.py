@@ -27,14 +27,18 @@ FRAME_MARKER_SMALL_CFG = FRAME_MARKER_CFG.copy()
 FRAME_MARKER_SMALL_CFG.markers["frame"].scale = (0.05, 0.05, 0.05)
 
 
-# 10 right-side elevator USDs selected by farthest-point sampling for geometric spread.
-_ELEVATOR_USD_IDS = [1, 19, 22, 35, 42, 46, 81, 85, 88, 92]
+# All 100 elevator variants — robot spawns in front of the button regardless of side.
+_ELEVATOR_USD_IDS = list(range(1, 101))
 import os
-# Use the in-container path when available (container sees /workspace/),
-# otherwise fall back to host path.
-_HOST_DIR = "/root/robotis_lab/third_party/elevator_setup"
-_CONTAINER_DIR = "/workspace/robotis_lab/third_party/elevator_setup"
-_ELEVATOR_USD_DIR = _CONTAINER_DIR if os.path.isdir(_CONTAINER_DIR) else _HOST_DIR
+# Use the in-container path when available, then fall back to host paths.
+_CONTAINER_DIR = "/workspace/robotis_lab/third_party/elevator_setup_new"
+_HOST_DIR = "/root/robotis_lab/third_party/elevator_setup_new"
+_ALT_DIR = "/home/ub/Downloads/elev_setup_new"
+_ELEVATOR_USD_DIR = (
+    _CONTAINER_DIR if os.path.isdir(_CONTAINER_DIR) else
+    _HOST_DIR if os.path.isdir(_HOST_DIR) else
+    _ALT_DIR
+)
 ELEVATOR_USD_PATHS = [
     f"{_ELEVATOR_USD_DIR}/elevator_setup_{i:03d}.usd" for i in _ELEVATOR_USD_IDS
 ]
@@ -43,7 +47,7 @@ ELEVATOR_USD_PATHS = [
 ELEVATOR_POS = (1.8, 0.0, 0.0)
 ELEVATOR_ROT = (0.7071, 0.0, 0.0, 0.7071)
 
-PEDESTAL_HEIGHT = 0.7
+PEDESTAL_HEIGHT = 0.908  # real robot height
 ROBOT_XY = (1.0, 0.5)
 
 
@@ -55,6 +59,7 @@ class ElevatorCallSceneCfg(InteractiveSceneCfg):
     # Visuomotor cameras (filled in by agent-level cfg).
     cam_wrist: CameraCfg = MISSING
     cam_top: CameraCfg = MISSING
+    cam_belly: CameraCfg = MISSING
 
     # Elevator as a static asset. Buttons have prismatic joints internally; we
     # detect "pressed" via EEF-to-button distance rather than articulation state
@@ -114,6 +119,8 @@ class ObservationsCfg:
         # State obs (flat vectors).
         joint_pos = ObsTerm(func=mdp.joint_pos_rel)
         joint_vel = ObsTerm(func=mdp.joint_vel_rel)
+        eef_pos = ObsTerm(func=mdp.ee_pos)
+        eef_quat = ObsTerm(func=mdp.ee_quat)
         call_button_pos = ObsTerm(func=mdp.call_button_pos)
         rel_ee_call_button_distance = ObsTerm(func=mdp.rel_ee_call_button_distance)
         actions = ObsTerm(func=mdp.last_action)
@@ -127,6 +134,10 @@ class ObservationsCfg:
         cam_top = ObsTerm(
             func=mdp.image,
             params={"sensor_cfg": SceneEntityCfg("cam_top"), "data_type": "rgb", "normalize": False},
+        )
+        cam_belly = ObsTerm(
+            func=mdp.image,
+            params={"sensor_cfg": SceneEntityCfg("cam_belly"), "data_type": "rgb", "normalize": False},
         )
 
         def __post_init__(self):
@@ -170,9 +181,9 @@ class EventCfg:
         func=mdp.randomize_elevator_pose,
         mode="reset",
         params={
-            "x_range": (-0.10, 0.10),
-            "y_range": (-0.10, 0.10),
-            "z_range": (-0.10, 0.10),  # button height variation
+            "x_range": (0.0, 0.0),
+            "y_range": (0.0, 0.0),
+            "z_range": (0.0, 0.0),  # elevator pose fixed
         },
     )
 
@@ -182,9 +193,9 @@ class EventCfg:
         func=mdp.reset_robot_at_hall_side_of_button,
         mode="reset",
         params={
-            "standoff_range": (0.25, 0.6),
-            "lateral_range": (-0.3, 0.3),
-            "yaw_offset_range_deg": (-25.0, 25.0),
+            "standoff_range": (0.55, 0.65),
+            "lateral_range": (-0.05, 0.05),
+            "yaw_offset_range_deg": (0.0, 0.0),
             "pedestal_height": PEDESTAL_HEIGHT,
         },
     )
@@ -193,11 +204,11 @@ class EventCfg:
 @configclass
 class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    # Success when EEF is within 3cm of CallBtn_0. Shared across task variants
-    # so record_demos.py can detect success and export demos.
+    # Success when EEF is within 5cm of CallBtn_0. 5 cm is large enough to
+    # detect a surface-level touch without driving the tip into the button mesh.
     success = DoneTerm(
         func=mdp.call_button_pressed,
-        params={"distance_threshold": 0.03},
+        params={"distance_threshold": 0.038},
     )
 
 

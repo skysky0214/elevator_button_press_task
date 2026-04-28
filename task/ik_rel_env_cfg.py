@@ -27,5 +27,5 @@ class OMYElevatorCallEnvCfg(joint_pos_env_cfg.OMYElevatorCallEnvCfg):
                 ik_method="dls",
             ),
             scale=0.1,
-            body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(pos=[0.0, 0.0, 0.0]),
+            body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(pos=[0.0, -0.248, 0.0]),
         )

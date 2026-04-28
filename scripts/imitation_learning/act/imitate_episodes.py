@@ -24,7 +24,7 @@ e = IPython.embed
 def main(args):
     # Strip resume-only args from sys.argv before DETR's build parser runs
     import sys as _sys
-    _our_extra = {'--from_ckpt', '--start_epoch'}
+    _our_extra = {'--from_ckpt', '--start_epoch', '--aux_weight'}
     _na = []
     _i = 0
     while _i < len(_sys.argv):

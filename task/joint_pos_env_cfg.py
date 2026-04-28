@@ -14,7 +14,7 @@ from robotis_lab.simulation_tasks.manager_based.OMY.elevator_call.elevator_call_
     ElevatorCallEnvCfg,
 )
 
-from robotis_lab.assets.robots.OMY import OMY_OFF_SELF_COLLISION_CFG as OMY_CFG  # isort: skip
+from robotis_lab.assets.robots.OMY import OMY_CFG  # isort: skip
 
 
 @configclass
@@ -30,6 +30,9 @@ class OMYElevatorCallEnvCfg(ElevatorCallEnvCfg):
         # with a closed fist from step 0, like in omy_f3m_press_diffik.py.
         closed_joint_pos = dict(OMY_CFG.init_state.joint_pos)
         closed_joint_pos["rh_r1_joint"] = 1.0
+        closed_joint_pos["rh_r2"] = 1.0
+        closed_joint_pos["rh_l1"] = 1.0
+        closed_joint_pos["rh_l2"] = 1.0
         self.scene.robot = OMY_CFG.replace(
             prim_path="{ENV_REGEX_NS}/Robot",
             init_state=OMY_CFG.init_state.replace(
@@ -40,10 +43,10 @@ class OMYElevatorCallEnvCfg(ElevatorCallEnvCfg):
                 **OMY_CFG.actuators,
                 "gripper": ImplicitActuatorCfg(
                     joint_names_expr=["rh_r1_joint", "rh_r2", "rh_l1", "rh_l2"],
-                    effort_limit_sim=100.0,
+                    effort_limit_sim=5000.0,
                     velocity_limit_sim=3.0,
-                    stiffness=1500.0,
-                    damping=60.0,
+                    stiffness=2000000.0,
+                    damping=20000.0,
                 ),
             },
         )
@@ -59,8 +62,55 @@ class OMYElevatorCallEnvCfg(ElevatorCallEnvCfg):
         self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
             asset_name="robot",
             joint_names=["rh_r1_joint", "rh_r2", "rh_l1", "rh_l2"],
-            open_command_expr={"rh_r1_joint": 0.0, "rh_r2": 0.0, "rh_l1": 0.0, "rh_l2": 0.0},
+            open_command_expr={"rh_r1_joint": 1.0, "rh_r2": 1.0, "rh_l1": 1.0, "rh_l2": 1.0},
             close_command_expr={"rh_r1_joint": 1.0, "rh_r2": 1.0, "rh_l1": 1.0, "rh_l2": 1.0},
+        )
+
+        # Cameras
+        self.scene.cam_wrist = CameraCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/OMY/link6/cam_wrist",
+            update_period=0.0,
+            height=84,
+            width=84,
+            data_types=["rgb"],
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=11.8, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
+            ),
+            offset=CameraCfg.OffsetCfg(
+                pos=(0.0, -0.08, 0.07),
+                rot=(0.0018, -0.0018, 0.7071, 0.7071),
+                convention="isaac",
+            ),
+        )
+        self.scene.cam_top = CameraCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/OMY/world/cam_top",
+            update_period=0.0,
+            height=84,
+            width=84,
+            data_types=["rgb"],
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=10.0, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
+            ),
+            offset=CameraCfg.OffsetCfg(
+                pos=(0.000233, 0.1499, 0.43953),
+                rot=(0.5144, 0.4146, -0.5064, -0.5542),
+                convention="isaac",
+            ),
+        )
+        self.scene.cam_belly = CameraCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/OMY/world/cam_belly",
+            update_period=0.0,
+            height=84,
+            width=84,
+            data_types=["rgb"],
+            spawn=sim_utils.PinholeCameraCfg(
+                focal_length=10.0, focus_distance=200.0, horizontal_aperture=20.955, clipping_range=(0.01, 100.0)
+            ),
+            offset=CameraCfg.OffsetCfg(
+                pos=(0.08705, 0.1499, 0.1075),
+                rot=(-0.4901, -0.5097, 0.5097, 0.4901),  # tuned in cam_edit_belly.py
+                convention="isaac",
+            ),
         )
 
         # EEF frame: mirror the cabinet task so downstream tooling sees the
@@ -86,55 +136,4 @@ class OMYElevatorCallEnvCfg(ElevatorCallEnvCfg):
                     offset=OffsetCfg(pos=(0.0, 0.0, 0.0)),
                 ),
             ],
-        )
-
-        # ----------- Cameras (visuomotor IL) -----------
-        # cam_wrist — mounted on link6, matching the pick_place task's wrist
-        # cam pattern so the obs interface is identical.
-        self.scene.cam_wrist = CameraCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/OMY/link6/cam_wrist",
-            update_period=0.0,
-            height=240,
-            width=320,
-            data_types=["rgb"],
-            spawn=sim_utils.PinholeCameraCfg(
-                focal_length=11.8, focus_distance=200.0,
-                horizontal_aperture=20.955, clipping_range=(0.01, 100.0),
-            ),
-            offset=CameraCfg.OffsetCfg(
-                # Tuned interactively in sim (cam_edit_static.py).
-                pos=(0.0, -0.08, 0.07),
-                rot=(0.0018, -0.0018, 0.7071, 0.7071),
-                convention="isaac",
-            ),
-        )
-
-        # cam_top — "head camera" matching the physical OMY setup.
-        # CAD coords (X=fwd, Y=up, Z=lr), both components mm:
-        #   manipulator origin = (-150, 1000, 220)
-        #   head camera        = (   0, 1360, 220)
-        # → Camera is 150mm "less backward" than the arm — i.e. in CAD terms
-        #   0.15m toward the front, but the real mount sits slightly BEHIND the
-        #   arm tip (the arm is the structure extending forward from its base).
-        # CAD→ROS axis map (CAD X=fwd → ROS X=fwd, CAD Y=up → ROS Z=up,
-        #                    CAD Z=lr  → ROS Y=left):
-        #   ROS offset from arm base = (-0.15, 0.0, +0.36)  (15cm behind, 36cm up)
-        # Orientation: look forward with ~30° pitch down.
-        self.scene.cam_top = CameraCfg(
-            prim_path="{ENV_REGEX_NS}/Robot/OMY/world/cam_top",
-            update_period=0.0,
-            height=240,
-            width=320,
-            data_types=["rgb"],
-            spawn=sim_utils.PinholeCameraCfg(
-                focal_length=10.0, focus_distance=200.0,
-                horizontal_aperture=20.955, clipping_range=(0.01, 100.0),
-            ),
-            offset=CameraCfg.OffsetCfg(
-                # Position: CAD z=0.36 (height match), x=-0.15 (15cm behind arm).
-                # Rotation: kept from interactive tuning (cam_edit_static.py).
-                pos=(-0.15, 0.0, 0.36),
-                rot=(0.5144, 0.4146, -0.5064, -0.5542),
-                convention="isaac",
-            ),
         )

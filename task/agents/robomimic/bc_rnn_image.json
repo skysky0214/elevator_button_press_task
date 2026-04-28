@@ -79,7 +79,7 @@
             "low_noise_eval": true
         },
         "gmm": {
-            "enabled": true,
+            "enabled": false,
             "num_modes": 5,
             "min_std": 0.01,
             "std_activation": "softplus",
@@ -123,7 +123,8 @@
                 ],
                 "rgb": [
                     "cam_wrist",
-                    "cam_top"
+                    "cam_top",
+                    "cam_belly"
                 ],
                 "depth": [],
                 "scan": []
