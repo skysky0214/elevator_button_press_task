@@ -75,23 +75,23 @@ class DETRVAE(nn.Module):
         self.latent_out_proj = nn.Linear(self.latent_dim, hidden_dim) # project latent sample to embedding
         self.additional_pos_embed = nn.Embedding(2, hidden_dim) # learned position embedding for proprio and latent
 
-        # Auxiliary head: predict normalized button pixel (u, v) ∈ [0,1] from
-        # the wrist camera global feature. Hooked off the backbone before
+        # Auxiliary heads: one per camera. Each head takes the camera's
+        # backbone global-pooled feature and predicts normalized button pixel
+        # (u, v) ∈ [0,1] for that view. Hooked off the backbone before
         # input_proj so the gradient grounds the visual encoder directly.
         if backbones is not None:
-            self._wrist_cam_index = (
-                self.camera_names.index("cam_wrist") if "cam_wrist" in self.camera_names else 0
-            )
             backbone_dim = backbones[0].num_channels
-            self.aux_uv_head = nn.Sequential(
-                nn.Linear(backbone_dim, 128),
-                nn.GELU(),
-                nn.Linear(128, 2),
-                nn.Sigmoid(),  # output in [0, 1]
-            )
+            self.aux_uv_heads = nn.ModuleList([
+                nn.Sequential(
+                    nn.Linear(backbone_dim, 128),
+                    nn.GELU(),
+                    nn.Linear(128, 2),
+                    nn.Sigmoid(),
+                )
+                for _ in range(len(self.camera_names))
+            ])
         else:
-            self._wrist_cam_index = 0
-            self.aux_uv_head = None
+            self.aux_uv_heads = None
 
     def forward(self, qpos, image, env_state, actions=None, is_pad=None):
         """
@@ -136,19 +136,21 @@ class DETRVAE(nn.Module):
             # Image observation features and position embeddings
             all_cam_features = []
             all_cam_pos = []
-            wrist_raw_feature = None
+            cam_raw_features = []  # (per-cam list, BEFORE input_proj)
             for cam_id, cam_name in enumerate(self.camera_names):
                 features, pos = self.backbones[0](image[:, cam_id]) # HARDCODED
                 features = features[0] # take the last layer feature
                 pos = pos[0]
-                if cam_id == self._wrist_cam_index:
-                    wrist_raw_feature = features  # (bs, C, H, W) BEFORE input_proj
+                cam_raw_features.append(features)
                 all_cam_features.append(self.input_proj(features))
                 all_cam_pos.append(pos)
-            # aux head: global-avg-pool wrist feature -> (u, v)
-            if self.aux_uv_head is not None and wrist_raw_feature is not None:
-                wrist_global = wrist_raw_feature.mean(dim=[-2, -1])  # (bs, C)
-                uv_pred = self.aux_uv_head(wrist_global)             # (bs, 2)
+            # Per-camera aux heads → stack to (bs, num_cams, 2)
+            if self.aux_uv_heads is not None:
+                uv_per_cam = []
+                for cam_id, head in enumerate(self.aux_uv_heads):
+                    g = cam_raw_features[cam_id].mean(dim=[-2, -1])  # (bs, C)
+                    uv_per_cam.append(head(g))                       # (bs, 2)
+                uv_pred = torch.stack(uv_per_cam, dim=1)             # (bs, num_cams, 2)
             # proprioception features
             proprio_input = self.input_proj_robot_state(qpos)
             # fold camera dimension into width dimension

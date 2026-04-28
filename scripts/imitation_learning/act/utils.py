@@ -47,16 +47,26 @@ class EpisodicDataset(torch.utils.data.Dataset):
                 action = root['/action'][max(0, start_ts - 1):] # hack, to make timesteps more aligned
                 action_len = episode_len - max(0, start_ts - 1) # hack, to make timesteps more aligned
 
-            # aux: button pixel (u, v, valid) at start_ts. If missing in this dataset, fall back
-            # to (0, 0, 0) so the aux loss is masked out (valid=0) and training continues
-            # backward-compatibly with v01/v02 demos.
-            if '/observations/button_pixel_uv_wrist' in root:
-                uv_full = root['/observations/button_pixel_uv_wrist'][start_ts]
-                uv_norm = (uv_full[:2].astype(np.float32) / np.array([1920.0, 1200.0], dtype=np.float32))
-                aux_valid = np.float32(uv_full[2])
-            else:
-                uv_norm = np.zeros(2, dtype=np.float32)
-                aux_valid = np.float32(0.0)
+            # aux: per-camera button pixel (u, v, valid) at start_ts.
+            # Loads keys named `/observations/button_pixel_uv_<short>` where
+            # <short> is the camera name minus the "cam_" prefix (e.g. "wrist",
+            # "top", "belly"). Missing keys fall back to (0, 0, 0) so masked
+            # loss skips them — keeps backward-compat with v01/v02 demos.
+            uv_norms = []
+            valids = []
+            for cam_name in self.camera_names:
+                short = cam_name.replace("cam_", "")
+                key = f"/observations/button_pixel_uv_{short}"
+                if key in root:
+                    uv_full = root[key][start_ts]
+                    uv_norms.append(uv_full[:2].astype(np.float32) /
+                                    np.array([1920.0, 1200.0], dtype=np.float32))
+                    valids.append(np.float32(uv_full[2]))
+                else:
+                    uv_norms.append(np.zeros(2, dtype=np.float32))
+                    valids.append(np.float32(0.0))
+            uv_norm = np.stack(uv_norms, axis=0)        # (num_cams, 2)
+            aux_valid = np.array(valids, dtype=np.float32)  # (num_cams,)
 
         self.is_sim = is_sim
         padded_action = np.zeros(original_action_shape, dtype=np.float32)
@@ -75,8 +85,8 @@ class EpisodicDataset(torch.utils.data.Dataset):
         qpos_data = torch.from_numpy(qpos).float()
         action_data = torch.from_numpy(padded_action).float()
         is_pad = torch.from_numpy(is_pad).bool()
-        uv_norm_t = torch.from_numpy(uv_norm).float()                 # (2,)
-        aux_valid_t = torch.tensor(aux_valid, dtype=torch.float32)    # scalar
+        uv_norm_t = torch.from_numpy(uv_norm).float()                 # (num_cams, 2)
+        aux_valid_t = torch.from_numpy(aux_valid).float()             # (num_cams,)
 
         # channel last
         image_data = torch.einsum('k h w c -> k c h w', image_data)

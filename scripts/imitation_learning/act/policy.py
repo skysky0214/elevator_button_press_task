@@ -35,11 +35,13 @@ class ACTPolicy(nn.Module):
             loss_dict['l1'] = l1
             loss_dict['kl'] = total_kld[0]
 
-            # Aux: button (u,v) MSE on wrist cam, masked by `valid` so frames
-            # where the button is out of view (valid=0) don't contribute.
+            # Aux: per-camera button (u,v) Smooth-L1 (Huber, beta=0.1 since uv
+            # is normalized to [0,1]). Each camera contributes only on frames
+            # where its valid flag is set; out-of-view frames are masked out.
+            # Shapes: uv_pred / uv_gt (B, num_cams, 2), valid (B, num_cams).
             if self.aux_weight > 0.0 and uv_pred is not None and uv_gt is not None and valid is not None:
-                sq_err = ((uv_pred - uv_gt) ** 2).sum(-1)        # (B,)
-                masked = sq_err * valid                          # (B,)
+                err = F.smooth_l1_loss(uv_pred, uv_gt, reduction='none', beta=0.1).sum(-1)  # (B, num_cams)
+                masked = err * valid                                                       # (B, num_cams)
                 aux = masked.sum() / (valid.sum() + 1e-6)
             else:
                 aux = torch.zeros((), device=l1.device)

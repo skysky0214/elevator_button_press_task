@@ -85,10 +85,12 @@ def convert(src_dir, out_dir, cam_names, target_hw, min_size_bytes=1_000_000, ep
                 raw_act = d["actions"][sl]
                 padded = np.concatenate([raw_act, np.zeros((raw_act.shape[0], 1), dtype=np.float32)], axis=1)
                 out.create_dataset("action", data=pad(padded))
-                # aux: pass through (u, v, valid) per frame if upstream provided it.
-                if "obs/button_pixel_uv_wrist" in d:
-                    uv = d["obs/button_pixel_uv_wrist"][sl].astype(np.float32)
-                    obs.create_dataset("button_pixel_uv_wrist", data=pad(uv))
+                # aux: pass through per-camera (u, v, valid) keys when present.
+                for short in ("wrist", "top", "belly"):
+                    src_key = f"obs/button_pixel_uv_{short}"
+                    if src_key in d:
+                        uv = d[src_key][sl].astype(np.float32)
+                        obs.create_dataset(f"button_pixel_uv_{short}", data=pad(uv))
         print(f"  [{i+1}/{len(valid)}] {os.path.basename(f)} T={T} -> episode_{i}.hdf5", flush=True)
 
     print(f"done. {len(valid)} episodes (len={episode_len}) -> {out_dir}")
